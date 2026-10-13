@@ -48,4 +48,6 @@ def get_cat_sticker(context: str):
 
 if __name__ == "__main__":
 
-    mcp.run()
+    mcp.run(
+        transport="streamable-http"
+    )
