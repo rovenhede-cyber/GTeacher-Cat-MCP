@@ -1,0 +1,5 @@
+2026-10-13 18:04:09,080 - INFO - StreamableHTTP session manager started
+2026-10-13 18:04:15,951 - INFO - Created new transport with session ID: a7a5f1d0ce7e4cdfb7f5fb51dd55aa12
+2026-10-13 18:04:16,659 - INFO - Sticker library loaded from GitHub
+2026-10-13 18:04:16,660 - INFO - Matched sticker: 爱心气球猫
+2026-10-13 18:04:16,675 - INFO - Terminating session: a7a5f1d0ce7e4cdfb7f5fb51dd55aa12

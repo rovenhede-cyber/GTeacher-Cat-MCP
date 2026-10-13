@@ -3,120 +3,107 @@ import os
 
 from dotenv import load_dotenv
 
+from logger_config import logger
+
+
 load_dotenv()
 
 
-_cache = None
+_library_cache = None
 
 
 REPO_RAW = os.getenv(
     "STICKER_REPO_URL"
 )
 
+
 JSON_URL = REPO_RAW + "instructions.json"
-
-
-_library_cache = None
 
 
 def load_library():
 
     global _library_cache
 
-    if _library_cache is None:
 
-        response = requests.get(JSON_URL)
+    if _library_cache is not None:
 
-        response.raise_for_status()
+        logger.info(
+            "Using cached sticker library"
+        )
 
-        _library_cache = response.json()
+        return _library_cache
+
+
+    response = requests.get(
+        JSON_URL
+    )
+
+    response.raise_for_status()
+
+
+    _library_cache = response.json()
+
+
+    logger.info(
+        "Sticker library loaded from GitHub"
+    )
+
 
     return _library_cache
 
 
 
-def calculate_score(context, item):
-
-    score = 0
-
-    context = context.lower()
-
-
-    fields = {
-        "name": 5,
-        "tags": 4,
-        "use_when": 3,
-        "description": 1
-    }
-
-
-    for field, weight in fields.items():
-
-        value = item.get(field, "")
-
-
-        if isinstance(value, list):
-
-            value = " ".join(value)
-
-
-        if value.lower() in context:
-
-            score += weight
-
-
-        for word in value.split():
-
-            if word and word.lower() in context:
-
-                score += weight
-
-
-    score += item.get(
-        "priority",
-        0
-    ) * 0.2
-
-
-    return score
-
-
-
-def search_sticker(context):
+def search_sticker(keyword):
 
     data = load_library()
 
     stickers = data["stickers"]
 
-
-    results = []
+    result = []
 
 
     for item in stickers:
 
-        score = calculate_score(
-            context,
-            item
-        )
-
-        if score > 0:
-
-            results.append(
-                (
-                    score,
-                    item
-                )
-            )
+        text = " ".join([
+            item.get("name", ""),
+            item.get("description", ""),
+            " ".join(item.get("tags", [])),
+            " ".join(item.get("use_when", []))
+        ])
 
 
-    if results:
+        if keyword in text:
 
-        results.sort(
-            key=lambda x:x[0],
+            result.append(item)
+
+
+
+    if result:
+
+        result.sort(
+            key=lambda x: x.get(
+                "priority",
+                0
+            ),
             reverse=True
         )
 
-        return results[0][1]
+
+        selected = result[0]
+
+
+        logger.info(
+            f"Matched sticker: {selected['name']}"
+        )
+
+
+        return selected
+
+
+
+    logger.warning(
+        f"No sticker found for keyword: {keyword}"
+    )
 
 
     return None
