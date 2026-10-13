@@ -132,6 +132,39 @@ Return:
 "file":"stickers/t-1.jpg"
 }
 
+---
+
+# 🎬 Demo
+
+## Example: Find a cat sticker
+
+User:
+今天实验成功啦！
+
+AI:
+分析：
+情绪 = 开心
+场景 = 庆祝
+
+
+Call MCP Tool:
+
+```json
+{
+  "context": "开心庆祝"
+}
+Return:
+{
+  "name": "爱心气球猫",
+  "file": "stickers/t-1.jpg"
+}
+Result:
+🐈🎈 爱心气球猫
+
+Example:
+
+![GTeacher Cat MCP Demo](docs/demo.png)
+
 📌 Version History
 v0.3.0
 Current version.
