@@ -34,9 +34,9 @@ def get_cat_sticker(context: str):
 
 
     description = (
-         f"🐱 猫猫名称：{result['name']}\n"
-         f"📝 描述：{result['description']}\n\n"
-         f"🖼️ 原图地址：{url}"
+         f"猫猫名称：{result['name']}\n"
+         f"描述：{result['description']}\n\n"
+         f"![cat]({url})"
     )
 
 
@@ -72,18 +72,10 @@ def get_cat_sticker(context: str):
         )
 
 
-        return [
-            TextContent(
-                type="text",
-                text=description
-            ),
-
-            ImageContent(
-                type="image",
-                data=image_data,
-                mimeType=mime_type
-            )
-        ]
+        return TextContent(
+             type="text",
+             text=description
+        )
 
 
     except Exception as e:
