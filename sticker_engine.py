@@ -1,9 +1,13 @@
 import requests
+import os
+
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
-REPO_RAW = (
-    "https://raw.githubusercontent.com/"
-    "rovenhede-cyber/stickersforGPT/main/"
+REPO_RAW = os.getenv(
+    "STICKER_REPO_URL"
 )
 
 JSON_URL = REPO_RAW + "instructions.json"
