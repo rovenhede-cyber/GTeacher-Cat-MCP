@@ -6,6 +6,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+_cache = None
+
+
 REPO_RAW = os.getenv(
     "STICKER_REPO_URL"
 )
