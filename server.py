@@ -34,9 +34,9 @@ def get_cat_sticker(context: str):
 
 
     description = (
-        f"猫猫：{result['name']}\n"
-        f"描述：{result['description']}\n"
-        f"原图：{url}"
+         f"🐱 猫猫名称：{result['name']}\n"
+         f"📝 描述：{result['description']}\n\n"
+         f"🖼️ 原图地址：{url}"
     )
 
 
@@ -97,8 +97,32 @@ def get_cat_sticker(context: str):
 
 
 
-if __name__ == "__main__":
+import uvicorn
+from mcp.server.transport_security import TransportSecuritySettings
 
-    mcp.run(
-        transport="streamable-http"
+
+security = TransportSecuritySettings(
+    allowed_hosts=[
+        "seas-telescope-vaccine-affecting.trycloudflare.com",
+        "localhost",
+        "127.0.0.1"
+    ],
+    allowed_origins=[
+        "https://seas-telescope-vaccine-affecting.trycloudflare.com"
+    ]
+)
+
+
+app = mcp.streamable_http_app(
+    transport_security=security,
+    host="0.0.0.0"
+)
+
+
+if __name__ == "__main__":
+    uvicorn.run(
+        app,
+        host="0.0.0.0",
+        port=8000
     )
+
