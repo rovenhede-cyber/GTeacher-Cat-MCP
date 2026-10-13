@@ -1,5 +1,6 @@
 import requests
 import os
+import random
 
 from dotenv import load_dotenv
 
@@ -20,6 +21,7 @@ REPO_RAW = os.getenv(
 JSON_URL = REPO_RAW + "instructions.json"
 
 
+
 def load_library():
 
     global _library_cache
@@ -35,7 +37,8 @@ def load_library():
 
 
     response = requests.get(
-        JSON_URL
+        JSON_URL,
+        timeout=15
     )
 
     response.raise_for_status()
@@ -55,55 +58,136 @@ def load_library():
 
 def search_sticker(keyword):
 
+    """
+    根据关键词匹配猫猫。
+    
+    采用评分机制：
+    名称匹配 > 标签匹配 > 使用场景 > 描述
+    
+    同分结果随机选择，避免固定返回同一张图。
+    """
+
+
     data = load_library()
 
     stickers = data["stickers"]
 
-    result = []
+
+    scored_results = []
+
+
+    keyword = keyword.lower()
 
 
     for item in stickers:
 
-        text = " ".join([
-            item.get("name", ""),
-            item.get("description", ""),
-            " ".join(item.get("tags", [])),
-            " ".join(item.get("use_when", []))
-        ])
+
+        score = 0
 
 
-        if keyword in text:
+        name = item.get(
+            "name",
+            ""
+        ).lower()
 
-            result.append(item)
+
+        description = item.get(
+            "description",
+            ""
+        ).lower()
+
+
+        tags = [
+            x.lower()
+            for x in item.get(
+                "tags",
+                []
+            )
+        ]
+
+
+        use_when = [
+            x.lower()
+            for x in item.get(
+                "use_when",
+                []
+            )
+        ]
+
+
+        # 名称精准匹配
+        if keyword in name:
+
+            score += 5
+
+
+        # 标签匹配
+        if keyword in tags:
+
+            score += 4
+
+
+        # 使用场景匹配
+        if keyword in use_when:
+
+            score += 3
+
+
+        # 描述匹配
+        if keyword in description:
+
+            score += 1
 
 
 
-    if result:
+        if score > 0:
 
-        result.sort(
-            key=lambda x: x.get(
-                "priority",
-                0
-            ),
-            reverse=True
+            scored_results.append(
+                {
+                    "item": item,
+                    "score": score
+                }
+            )
+
+
+
+    if not scored_results:
+
+        logger.warning(
+            f"No sticker found for keyword: {keyword}"
         )
 
-
-        selected = result[0]
-
-
-        logger.info(
-            f"Matched sticker: {selected['name']}"
-        )
-
-
-        return selected
+        return None
 
 
 
-    logger.warning(
-        f"No sticker found for keyword: {keyword}"
+    # 找最高分
+
+    max_score = max(
+        x["score"]
+        for x in scored_results
     )
 
 
-    return None
+    best_candidates = [
+        x["item"]
+        for x in scored_results
+        if x["score"] == max_score
+    ]
+
+
+
+    # 同等级随机选择
+
+    selected = random.choice(
+        best_candidates
+    )
+
+
+    logger.info(
+        f"Matched sticker: {selected['name']} "
+        f"(score={max_score})"
+    )
+
+
+    return selected
