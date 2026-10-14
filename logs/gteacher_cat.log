@@ -114,3 +114,129 @@
 2026-10-14 12:33:15,041 - WARNING - Invalid Host header: cat.hedecat.cc
 2026-10-14 12:33:15,042 - INFO - Terminating session: 50b4d950047040efa09baaacb5185b82
 2026-10-14 12:37:27,830 - INFO - StreamableHTTP session manager shutting down
+2026-10-14 12:37:36,757 - INFO - StreamableHTTP session manager started
+2026-10-14 12:37:48,336 - INFO - Created new transport with session ID: fad267bcedd84cd9b2a59afd25d1cb62
+2026-10-14 12:37:48,343 - INFO - Terminating session: fad267bcedd84cd9b2a59afd25d1cb62
+2026-10-14 12:41:46,392 - INFO - Sticker library loaded from GitHub
+2026-10-14 12:41:46,393 - INFO - Matched sticker: 天使送心猫 (score=4)
+2026-10-14 12:42:18,194 - INFO - Using cached sticker library
+2026-10-14 12:42:18,194 - INFO - Matched sticker: 幸福情书兔 (score=10)
+2026-10-14 13:01:02,450 - INFO - StreamableHTTP session manager shutting down
+2026-10-14 13:01:15,320 - INFO - StreamableHTTP session manager started
+2026-10-14 13:02:08,661 - INFO - Sticker library loaded from GitHub
+2026-10-14 13:02:08,663 - INFO - Matched sticker: 幸福情书兔 (score=10)
+2026-10-14 13:02:22,860 - INFO - Using cached sticker library
+2026-10-14 13:02:22,860 - INFO - Matched sticker: 幸福情书兔 (score=10)
+2026-10-14 13:06:45,543 - INFO - StreamableHTTP session manager shutting down
+2026-10-14 13:06:51,281 - INFO - StreamableHTTP session manager started
+2026-10-14 13:07:05,186 - INFO - Sticker library loaded from GitHub
+2026-10-14 13:07:05,187 - INFO - Candidates: ['幸福情书兔']
+2026-10-14 13:07:05,187 - INFO - Matched sticker: 幸福情书兔 (score=10)
+2026-10-14 13:07:19,122 - INFO - Using cached sticker library
+2026-10-14 13:07:19,122 - INFO - Candidates: ['幸福情书兔']
+2026-10-14 13:07:19,122 - INFO - Matched sticker: 幸福情书兔 (score=10)
+2026-10-14 14:03:14,428 - INFO - StreamableHTTP session manager shutting down
+2026-10-14 18:46:06,901 - INFO - StreamableHTTP session manager started
+2026-10-14 18:48:18,160 - INFO - Sticker library loaded from GitHub
+2026-10-14 18:48:18,162 - WARNING - No sticker found for keyword: 实验失败了，伤心，需要安慰、抱抱、加油的猫猫表情包
+2026-10-14 18:48:54,724 - INFO - Using cached sticker library
+2026-10-14 18:48:54,725 - WARNING - No sticker found for keyword: 谢谢你，感恩，温暖，抱抱，安慰
+2026-10-14 19:04:34,894 - INFO - Sticker library loaded from GitHub
+2026-10-14 19:11:22,251 - INFO - Sticker library loaded from GitHub
+2026-10-14 19:11:22,252 - INFO - Candidates: ['贴贴猫狗', '亲亲猫狗', '爱心气球兔', '天使送心猫']
+2026-10-14 19:11:22,252 - INFO - Matched sticker: 天使送心猫 (score=12)
+2026-10-14 19:11:22,252 - INFO - Using cached sticker library
+2026-10-14 19:11:22,252 - INFO - Candidates: ['亲亲猫狗']
+2026-10-14 19:11:22,252 - INFO - Matched sticker: 亲亲猫狗 (score=11)
+2026-10-14 19:11:22,254 - INFO - Using cached sticker library
+2026-10-14 19:11:22,254 - INFO - Candidates: ['爱心气球兔']
+2026-10-14 19:11:22,254 - INFO - Matched sticker: 爱心气球兔 (score=6)
+2026-10-14 19:11:52,977 - INFO - StreamableHTTP session manager shutting down
+2026-10-14 19:11:58,537 - INFO - StreamableHTTP session manager started
+2026-10-14 19:12:23,397 - INFO - Sticker library loaded from GitHub
+2026-10-14 19:12:23,403 - ERROR - Tool 'get_cat_sticker' raised an unexpected exception
+Traceback (most recent call last):
+  File "C:\Users\Geen\Desktop\GTeacher-Cat-MCP\venv\Lib\site-packages\mcp\server\mcpserver\tools\base.py", line 179, in run
+    result = await self.fn_metadata.call_fn(self.fn, self.is_async, validated, pass_directly)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Geen\Desktop\GTeacher-Cat-MCP\venv\Lib\site-packages\mcp\server\mcpserver\utilities\func_metadata.py", line 164, in call_fn
+    return await anyio.to_thread.run_sync(functools.partial(fn, **kwargs))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Geen\Desktop\GTeacher-Cat-MCP\venv\Lib\site-packages\anyio\to_thread.py", line 65, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Geen\Desktop\GTeacher-Cat-MCP\venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 2706, in run_sync_in_worker_thread
+    return await future
+           ^^^^^^^^^^^^
+  File "C:\Users\Geen\Desktop\GTeacher-Cat-MCP\venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 1100, in run
+    result = context.run(func, *args)
+             ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Geen\Desktop\GTeacher-Cat-MCP\server.py", line 21, in get_cat_sticker
+    result = search_sticker(context)
+             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Geen\Desktop\GTeacher-Cat-MCP\sticker_engine.py", line 99, in search_sticker
+    for x in context.get(
+             ^^^^^^^^^^^
+AttributeError: 'str' object has no attribute 'get'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\Geen\Desktop\GTeacher-Cat-MCP\venv\Lib\site-packages\mcp\server\mcpserver\server.py", line 442, in _handle_call_tool
+    return await self.call_tool(params.name, params.arguments or {}, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Geen\Desktop\GTeacher-Cat-MCP\venv\Lib\site-packages\mcp\server\mcpserver\server.py", line 548, in call_tool
+    return await self._tool_manager.call_tool(name, arguments, context, convert_result=True)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Geen\Desktop\GTeacher-Cat-MCP\venv\Lib\site-packages\mcp\server\mcpserver\tools\tool_manager.py", line 87, in call_tool
+    return await tool.run(arguments, context, convert_result=convert_result)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Geen\Desktop\GTeacher-Cat-MCP\venv\Lib\site-packages\mcp\server\mcpserver\tools\base.py", line 213, in run
+    raise UnexpectedToolError(f"Error executing tool {self.name}") from exc
+mcp.server.mcpserver.exceptions.UnexpectedToolError: Error executing tool get_cat_sticker
+2026-10-14 19:13:33,435 - INFO - Using cached sticker library
+2026-10-14 19:13:33,436 - ERROR - Tool 'get_cat_sticker' raised an unexpected exception
+Traceback (most recent call last):
+  File "C:\Users\Geen\Desktop\GTeacher-Cat-MCP\venv\Lib\site-packages\mcp\server\mcpserver\tools\base.py", line 179, in run
+    result = await self.fn_metadata.call_fn(self.fn, self.is_async, validated, pass_directly)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Geen\Desktop\GTeacher-Cat-MCP\venv\Lib\site-packages\mcp\server\mcpserver\utilities\func_metadata.py", line 164, in call_fn
+    return await anyio.to_thread.run_sync(functools.partial(fn, **kwargs))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Geen\Desktop\GTeacher-Cat-MCP\venv\Lib\site-packages\anyio\to_thread.py", line 65, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Geen\Desktop\GTeacher-Cat-MCP\venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 2706, in run_sync_in_worker_thread
+    return await future
+           ^^^^^^^^^^^^
+  File "C:\Users\Geen\Desktop\GTeacher-Cat-MCP\venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 1100, in run
+    result = context.run(func, *args)
+             ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Geen\Desktop\GTeacher-Cat-MCP\server.py", line 21, in get_cat_sticker
+    result = search_sticker(context)
+             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Geen\Desktop\GTeacher-Cat-MCP\sticker_engine.py", line 99, in search_sticker
+    for x in context.get(
+             ^^^^^^^^^^^
+AttributeError: 'str' object has no attribute 'get'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\Geen\Desktop\GTeacher-Cat-MCP\venv\Lib\site-packages\mcp\server\mcpserver\server.py", line 442, in _handle_call_tool
+    return await self.call_tool(params.name, params.arguments or {}, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Geen\Desktop\GTeacher-Cat-MCP\venv\Lib\site-packages\mcp\server\mcpserver\server.py", line 548, in call_tool
+    return await self._tool_manager.call_tool(name, arguments, context, convert_result=True)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Geen\Desktop\GTeacher-Cat-MCP\venv\Lib\site-packages\mcp\server\mcpserver\tools\tool_manager.py", line 87, in call_tool
+    return await tool.run(arguments, context, convert_result=convert_result)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Geen\Desktop\GTeacher-Cat-MCP\venv\Lib\site-packages\mcp\server\mcpserver\tools\base.py", line 213, in run
+    raise UnexpectedToolError(f"Error executing tool {self.name}") from exc
+mcp.server.mcpserver.exceptions.UnexpectedToolError: Error executing tool get_cat_sticker
+2026-10-14 19:18:03,256 - INFO - StreamableHTTP session manager shutting down
+2026-10-14 19:18:11,299 - INFO - StreamableHTTP session manager started
+2026-10-14 19:18:27,526 - INFO - Sticker library loaded from GitHub
+2026-10-14 19:18:27,528 - INFO - Candidates: ['贴贴猫狗', '亲亲猫狗', '爱心气球兔', '天使送心猫']
+2026-10-14 19:18:27,528 - INFO - Matched sticker: 贴贴猫狗 (score=12)

@@ -5,6 +5,7 @@ from mcp.server import MCPServer
 from mcp.types import ImageContent, TextContent
 
 from sticker_engine import search_sticker
+from emotion_engine import analyze_context
 
 
 mcp = MCPServer(
@@ -17,8 +18,13 @@ def get_cat_sticker(context: str):
     """
     根据关键词寻找最匹配猫猫表情，并返回原始图片
     """
+    analysis = analyze_context(
+           context
+    )
 
-    result = search_sticker(context)
+    result = search_sticker(
+            analysis
+   )
 
     if result is None:
         return {

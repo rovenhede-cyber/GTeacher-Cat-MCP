@@ -3,7 +3,6 @@ import os
 import random
 
 from dotenv import load_dotenv
-
 from logger_config import logger
 
 
@@ -56,19 +55,37 @@ def load_library():
 
 
 
-def search_sticker(keyword):
+
+
+def search_sticker(context):
 
     """
-    根据关键词匹配猫猫。
-    
-    采用评分机制：
-    名称匹配 > 标签匹配 > 使用场景 > 描述
-    
-    同分结果随机选择，避免固定返回同一张图。
+    根据情绪分析结果寻找猫猫。
+
+    context 示例：
+
+    {
+        "emotion":[
+            "sad"
+        ],
+
+        "intent":[
+            "comfort"
+        ],
+
+        "keywords":[
+            "抱抱",
+            "安慰"
+        ],
+
+        "intensity":8
+    }
+
     """
 
 
     data = load_library()
+
 
     stickers = data["stickers"]
 
@@ -76,7 +93,39 @@ def search_sticker(keyword):
     scored_results = []
 
 
-    keyword = keyword.lower()
+
+    emotions = [
+        x.lower()
+        for x in context.get(
+            "emotion",
+            []
+        )
+    ]
+
+
+    intents = [
+        x.lower()
+        for x in context.get(
+            "intent",
+            []
+        )
+    ]
+
+
+    keywords = [
+        x.lower()
+        for x in context.get(
+            "keywords",
+            []
+        )
+    ]
+
+
+    intensity = context.get(
+        "intensity",
+        0
+    )
+
 
 
     for item in stickers:
@@ -97,6 +146,7 @@ def search_sticker(keyword):
         ).lower()
 
 
+
         tags = [
             x.lower()
             for x in item.get(
@@ -115,28 +165,88 @@ def search_sticker(keyword):
         ]
 
 
-        # 名称精准匹配
-        if keyword in name:
+        # ===== 情绪匹配 =====
 
-            score += 5
-
-
-        # 标签匹配
-        if keyword in tags:
-
-            score += 4
-
-
-        # 使用场景匹配
-        if keyword in use_when:
-
-            score += 3
+        item_emotions = [
+            x.lower()
+            for x in item.get(
+                "emotion",
+                []
+            )
+        ]
 
 
-        # 描述匹配
-        if keyword in description:
+        for emotion in emotions:
 
-            score += 1
+            if emotion in item_emotions:
+
+                score += 5
+
+
+
+        # ===== 意图匹配 =====
+
+        item_intents = [
+            x.lower()
+            for x in item.get(
+                "intent",
+                []
+            )
+        ]
+
+
+        for intent in intents:
+
+            if intent in item_intents:
+
+                score += 5
+
+
+
+        # ===== 标签匹配 =====
+
+        for keyword in keywords:
+
+
+            if keyword in tags:
+
+                score += 3
+
+
+
+            if keyword in name:
+
+                score += 4
+
+
+
+            if keyword in description:
+
+                score += 1
+
+
+
+            for scene in use_when:
+
+                if keyword in scene:
+
+                    score += 2
+
+
+
+        # ===== 强度匹配 =====
+
+        priority = item.get(
+            "priority",
+            5
+        )
+
+
+        if intensity >= 8:
+
+            if priority >= 8:
+
+                score += 2
 
 
 
@@ -153,15 +263,16 @@ def search_sticker(keyword):
 
     if not scored_results:
 
+
         logger.warning(
-            f"No sticker found for keyword: {keyword}"
+            "No sticker found for context: "
+            f"{context}"
         )
+
 
         return None
 
 
-
-    # 找最高分
 
     max_score = max(
         x["score"]
@@ -169,25 +280,38 @@ def search_sticker(keyword):
     )
 
 
+
     best_candidates = [
+
         x["item"]
+
         for x in scored_results
-        if x["score"] == max_score
+
+        if x["score"] >= max_score - 2
+
     ]
 
 
 
-    # 同等级随机选择
+    logger.info(
+        f"Candidates: "
+        f"{[x['name'] for x in best_candidates]}"
+    )
+
+
 
     selected = random.choice(
         best_candidates
     )
 
 
+
     logger.info(
-        f"Matched sticker: {selected['name']} "
+        f"Matched sticker: "
+        f"{selected['name']} "
         f"(score={max_score})"
     )
+
 
 
     return selected
