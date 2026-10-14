@@ -95,12 +95,13 @@ from mcp.server.transport_security import TransportSecuritySettings
 
 security = TransportSecuritySettings(
     allowed_hosts=[
-        "seas-telescope-vaccine-affecting.trycloudflare.com",
+        "cat.hedecat.cc",
         "localhost",
         "127.0.0.1"
     ],
     allowed_origins=[
-        "https://seas-telescope-vaccine-affecting.trycloudflare.com"
+        "http://cat.hedecat.cc",
+        "https://cat.hedecat.cc"
     ]
 )
 

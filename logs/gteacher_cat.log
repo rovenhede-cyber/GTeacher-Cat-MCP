@@ -55,3 +55,62 @@
 2026-10-13 22:37:17,663 - INFO - Sticker library loaded from GitHub
 2026-10-13 22:37:17,664 - INFO - Matched sticker: 天使送心猫
 2026-10-13 22:40:26,552 - INFO - StreamableHTTP session manager shutting down
+2026-10-13 22:40:29,999 - INFO - StreamableHTTP session manager started
+2026-10-13 22:40:57,295 - INFO - Sticker library loaded from GitHub
+2026-10-13 22:40:57,297 - WARNING - No sticker found for keyword: 关键词：爱。用户想要一个表达“爱你”的猫猫表情。
+2026-10-13 22:41:31,114 - INFO - Using cached sticker library
+2026-10-13 22:41:31,114 - INFO - Matched sticker: 爱心气球猫
+2026-10-13 22:48:41,696 - INFO - Using cached sticker library
+2026-10-13 22:48:41,696 - WARNING - No sticker found for keyword: 开心，可爱，撒娇，随机来一张猫猫表情包
+2026-10-13 22:49:21,250 - INFO - Using cached sticker library
+2026-10-13 22:49:21,251 - INFO - Matched sticker: 爱心气球猫
+2026-10-13 23:03:41,531 - INFO - Using cached sticker library
+2026-10-13 23:03:41,531 - INFO - Matched sticker: 爱心气球猫
+2026-10-13 23:09:35,986 - INFO - Using cached sticker library
+2026-10-13 23:09:35,986 - INFO - Matched sticker: 爱心气球猫
+2026-10-13 23:10:11,536 - INFO - Using cached sticker library
+2026-10-13 23:10:11,536 - INFO - Matched sticker: 爱心气球猫
+2026-10-13 23:13:11,218 - INFO - StreamableHTTP session manager shutting down
+2026-10-13 23:13:43,903 - INFO - StreamableHTTP session manager started
+2026-10-13 23:14:19,099 - INFO - Sticker library loaded from GitHub
+2026-10-13 23:14:19,104 - INFO - Matched sticker: 爱心气球猫 (score=4)
+2026-10-13 23:19:18,967 - INFO - Using cached sticker library
+2026-10-13 23:19:18,967 - INFO - Matched sticker: 幸福情书猫 (score=10)
+2026-10-13 23:21:20,289 - INFO - Using cached sticker library
+2026-10-13 23:21:20,289 - INFO - Matched sticker: 爱心气球猫 (score=4)
+2026-10-13 23:22:41,757 - INFO - StreamableHTTP session manager shutting down
+2026-10-13 23:22:47,790 - INFO - StreamableHTTP session manager started
+2026-10-13 23:23:18,799 - INFO - Sticker library loaded from GitHub
+2026-10-13 23:23:18,800 - INFO - Matched sticker: 爱心气球兔 (score=4)
+2026-10-13 23:24:14,306 - INFO - Using cached sticker library
+2026-10-13 23:24:14,307 - INFO - Matched sticker: 爱心气球兔 (score=4)
+2026-10-13 23:25:18,953 - INFO - StreamableHTTP session manager shutting down
+2026-10-13 23:25:26,845 - INFO - StreamableHTTP session manager started
+2026-10-13 23:26:06,604 - INFO - Sticker library loaded from GitHub
+2026-10-13 23:26:06,605 - INFO - Matched sticker: 爱心气球兔 (score=4)
+2026-10-13 23:37:03,373 - INFO - Sticker library loaded from GitHub
+2026-10-13 23:39:56,043 - INFO - Using cached sticker library
+2026-10-13 23:39:56,043 - INFO - Matched sticker: 爱心气球兔 (score=4)
+2026-10-13 23:42:13,443 - INFO - StreamableHTTP session manager shutting down
+2026-10-13 23:42:24,712 - INFO - StreamableHTTP session manager started
+2026-10-13 23:43:19,610 - INFO - Sticker library loaded from GitHub
+2026-10-13 23:43:19,611 - WARNING - No sticker found for keyword: 喜欢，想表达喜欢和心意的猫猫表情包
+2026-10-13 23:43:57,236 - INFO - Using cached sticker library
+2026-10-13 23:43:57,237 - INFO - Matched sticker: 幸福情书兔 (score=10)
+2026-10-13 23:44:53,554 - INFO - Using cached sticker library
+2026-10-13 23:44:53,555 - INFO - Matched sticker: 天使送心猫 (score=4)
+2026-10-13 23:45:30,763 - INFO - Using cached sticker library
+2026-10-13 23:45:30,764 - WARNING - No sticker found for keyword: 用户问：看到我要叫什么？希望知道应该怎么称呼用户。关键词：称呼、名字、昵称
+2026-10-13 23:45:51,611 - INFO - Using cached sticker library
+2026-10-13 23:45:51,611 - WARNING - No sticker found for keyword: 媳妇
+2026-10-13 23:47:00,006 - INFO - Using cached sticker library
+2026-10-13 23:47:00,006 - WARNING - No sticker found for keyword: 媳妇
+2026-10-13 23:59:06,198 - INFO - StreamableHTTP session manager shutting down
+2026-10-14 12:09:33,693 - INFO - StreamableHTTP session manager started
+2026-10-14 12:33:14,669 - INFO - Created new transport with session ID: 7822543a5dc7430ca985c66313b31620
+2026-10-14 12:33:14,671 - WARNING - Invalid Host header: cat.hedecat.cc
+2026-10-14 12:33:14,674 - INFO - Terminating session: 7822543a5dc7430ca985c66313b31620
+2026-10-14 12:33:15,040 - INFO - Created new transport with session ID: 50b4d950047040efa09baaacb5185b82
+2026-10-14 12:33:15,041 - WARNING - Invalid Host header: cat.hedecat.cc
+2026-10-14 12:33:15,042 - INFO - Terminating session: 50b4d950047040efa09baaacb5185b82
+2026-10-14 12:37:27,830 - INFO - StreamableHTTP session manager shutting down
