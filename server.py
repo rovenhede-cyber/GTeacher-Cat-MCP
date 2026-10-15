@@ -47,7 +47,7 @@ def send_cat_companion(
     # 1. 情绪分析
 
     analysis = analyze_context(
-        context
+        user_emotional_context
     )
 
 
