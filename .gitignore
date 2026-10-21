@@ -7,3 +7,29 @@ venv/
 
 # Environment variables
 .env
+
+# pytest
+.pytest_cache/
+tests/__pycache__/
+
+# Cloudflare Tunnel
+cloudflared.exe
+
+# Python environment
+venv/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Local secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+cert.json
+
+# Runtime logs
+logs/
+*.log
