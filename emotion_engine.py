@@ -17,6 +17,7 @@
 import hashlib
 import re
 
+import intent_engine
 from taxonomy import (
     ACTION_PATTERNS,
     CONFLICT_WORDS,
@@ -302,7 +303,13 @@ def analyze_context(text, explicit_request=False):
     if explicit_sticker_request and "点赞" in actions:
         keywords = sorted(set(keywords + ["点赞"]))
 
-    return {
+    # 诊断用：有多少类信号被识别出来。0 表示这段文本对选图毫无信息量
+    # （例如客户端根本没把用户原话传进来），这时不该说“场景不需要发图”。
+    signal_count = sum(
+        bool(x) for x in (user_groups, requested_groups, actions, scenes, intents, visual_features)
+    )
+
+    result = {
         # —— R3 打分用 ——
         "emotion": target_groups,
         "intent": intents,
@@ -322,10 +329,13 @@ def analyze_context(text, explicit_request=False):
         "requested_actions": visual_features if explicit_sticker_request else [],
         "requested_visual_features": visual_features if explicit_sticker_request else [],
         "explicit_sticker_request": explicit_sticker_request,
+        # 客户端是否**显式声明**了索图（R7.1 兜底只认这个，不认文本推断）
+        "explicit_request_flag": bool(explicit_request),
         "sticker_query": query if explicit_sticker_request else raw,
         "request_type": "factual" if serious else "social",
         "original_text": raw,
         "context_hash": text_hash(raw),
+        "signal_count": signal_count,
         # —— 排查用原始命中（不参与打分，也不进日志）——
         "_signals": {
             "crisis": crises,
@@ -340,3 +350,9 @@ def analyze_context(text, explicit_request=False):
             "visual": visual_features,
         },
     }
+
+    # R5：助手回应意图（第三层语义）。推不出来就是 None——不猜。
+    # 注意：这一项**不参与发送闸门**，只在安全闸门之后影响选图。
+    result["assistant_intent"] = intent_engine.derive_intent(result)
+    result["intent_source"] = "derived" if result["assistant_intent"] else "none"
+    return result

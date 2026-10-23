@@ -4,6 +4,8 @@
 用法：
     python tools/explain.py "我有点难过，抱抱我"
     python tools/explain.py "爱你，媳妇～" --relationship intimate
+    python tools/explain.py "实验又失败了" --mode auto
+    python tools/explain.py "抱歉" --intent apology --mode auto
 
 默认离线读取 tests/fixtures/instructions.json（可用 --library 指定），
 加 --remote 才从 GitHub 拉最新库。
@@ -16,13 +18,17 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
+import intent_engine                                # noqa: E402
+import sticker_engine                               # noqa: E402
 from emotion_engine import analyze_context          # noqa: E402
+from sticker_config import CONFIG                   # noqa: E402
 from sticker_engine import (                        # noqa: E402
     apply_filters,
     load_library,
     rank_stickers,
     set_library,
 )
+from taxonomy import ASSISTANT_INTENTS              # noqa: E402
 from trigger_engine import should_send_sticker      # noqa: E402
 
 FIXTURE = os.path.join(ROOT, "tests", "fixtures", "instructions.json")
@@ -36,7 +42,14 @@ def main():
     parser.add_argument("--library", default=None)
     parser.add_argument("--remote", action="store_true")
     parser.add_argument("--top", type=int, default=5)
+    parser.add_argument("--mode", default=None, choices=["off", "shadow", "auto"],
+                        help="R5 意图模式（默认取 R5_INTENT_MODE，即 shadow）")
+    parser.add_argument("--intent", default=None, choices=list(ASSISTANT_INTENTS),
+                        help="模拟调用方显式传入的 assistant_response_intent")
     args = parser.parse_args()
+
+    if args.mode:
+        CONFIG.intent_mode = args.mode
 
     if args.remote:
         data = load_library(force=True)
@@ -46,6 +59,12 @@ def main():
         set_library(data)
 
     ctx = analyze_context(args.text)
+    if args.intent:
+        ctx["assistant_intent"] = args.intent
+        ctx["intent_source"] = "explicit"
+    mode = sticker_engine.intent_mode()
+    ctx["_intent_active"] = mode == "auto"
+
     print("文本     :", args.text)
     print("情绪     :", ctx["emotion"] or "-")
     print("意图     :", ctx["intent"] or "-")
@@ -55,6 +74,9 @@ def main():
     print("危机/严肃:", ctx["crisis"], "/", ctx["serious"])
     print("关系     :", args.relationship)
     print("是否发送 :", should_send_sticker(ctx))
+    print("R5 模式  :", mode, "（意图%s参与打分）" % ("会" if mode == "auto" else "不"))
+    print("助手意图 :", ctx.get("assistant_intent") or "-",
+          "（来源：%s）" % ctx.get("intent_source", "none"))
 
     kept, dropped = apply_filters(data["stickers"], ctx, relationship=args.relationship)
     print("过滤     : 保留 %d / 剔除 %d" % (len(kept), len(dropped)))
@@ -64,8 +86,10 @@ def main():
     ranked = rank_stickers(ctx, items=data["stickers"], relationship=args.relationship)
     print("候选 Top%d:" % args.top)
     for row in ranked[: args.top]:
-        print("   %-8s %-12s score=%-6.2f %s"
-              % (row["id"], row["item"]["name"], row["score"], row["breakdown"]))
+        behavior = intent_engine.behaviors_for(row["item"])
+        print("   %-8s %-12s score=%-6.2f 行为=%s(%s) %s"
+              % (row["id"], row["item"]["name"], row["score"],
+                 "/".join(behavior["behaviors"]), behavior["source"], row["breakdown"]))
 
 
 if __name__ == "__main__":

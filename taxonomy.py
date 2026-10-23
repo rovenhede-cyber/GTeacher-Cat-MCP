@@ -162,3 +162,91 @@ RELATIONSHIP_ALLOWED = {
 }
 
 DANGER_MARKERS = ("刀", "持刀", "威慑", "威胁")
+
+# ---------------------------------------------------------------- R5：助手回应意图
+# R5 新增第三层语义：**助手打算怎么回应**。它不是用户情绪，也不是图片情绪，
+# 而是"这张图被发出去时，助手在做一个什么表达行为"。
+#
+# 10 类，互斥（一条上下文只推导一个意图），但一张图可以有多个行为。
+ASSISTANT_INTENTS = (
+    "comfort",      # 安慰：接住难过/委屈/崩溃
+    "accompany",    # 陪伴：安静在场，一起累/一起摆烂
+    "encourage",    # 鼓励：打气、别放弃
+    "celebrate",    # 庆祝：替你高兴、赞赏
+    "gratitude",    # 感谢：谢谢你
+    "affection",    # 亲密：贴贴、亲亲、比心
+    "apology",      # 道歉：对不起（默认图库无此行为，见 APOLOGY_ACTION_EVIDENCE）
+    "teasing",      # 打趣：玩笑式嫌弃/威胁/吐槽
+    "agree",        # 认同：对、就是这样
+    "acknowledge",  # 收到：知道了、明白
+)
+
+# 表情包表达行为 = 10 类意图 + 无表态
+ASSISTANT_BEHAVIORS = ASSISTANT_INTENTS + ("neutral",)
+
+# 近义家族：意图与图片行为不完全一致时给较低分，而不是零分。
+INTENT_FAMILY = {
+    "comfort": "support",
+    "accompany": "support",
+    "encourage": "support",
+    "celebrate": "positive",
+    "gratitude": "positive",
+    "affection": "positive",
+    "apology": "repair",
+    "teasing": "play",
+    "agree": "align",
+    "acknowledge": "align",
+}
+
+# 明显矛盾的行为：扣分（不参与过滤，只影响排序）。
+# 只写"语义上真的不能同时成立"的组合，避免把选择空间压得太死。
+INTENT_CONFLICT = {
+    "comfort": ("teasing", "celebrate", "apology"),
+    "accompany": ("teasing", "celebrate"),
+    "encourage": ("teasing", "apology"),
+    "celebrate": ("comfort", "apology"),
+    "gratitude": ("teasing", "apology"),
+    "affection": ("apology", "teasing"),
+    "apology": ("celebrate", "teasing", "gratitude"),
+    "teasing": ("comfort", "apology", "gratitude"),
+    "agree": ("apology", "teasing"),
+    "acknowledge": ("apology", "teasing", "affection"),
+}
+
+# 规则推导（没有 manual overlay 时）：只用 scene 判断"这个动作在做什么"。
+# 不用 description 关键词，避免"图里出现爱心就算 affection"这种过度推导。
+BEHAVIOR_RULES = {
+    "安慰": ("comfort",),
+    "伤心": ("comfort",),
+    "崩溃": ("comfort",),
+    "感动": ("comfort",),
+    "感谢": ("gratitude",),
+    "庆祝": ("celebrate",),
+    "赞赏": ("celebrate",),
+    "示爱": ("affection",),
+    "亲密互动": ("affection",),
+    "浪漫示爱": ("affection",),
+    "幸福": ("affection",),
+    "求婚": ("affection",),
+    "鼓励": ("encourage",),
+    "自信": ("encourage",),
+    "确认": ("agree", "acknowledge"),
+    "问候": ("acknowledge",),
+    "玩笑式警告": ("teasing",),
+    "玩笑式驱赶": ("teasing",),
+    "生气": ("comfort",),
+    "拒绝": ("comfort",),
+    "疲惫": ("accompany",),
+    "休息": ("accompany",),
+    "晚安": ("accompany",),
+    "赖床": ("accompany",),
+    "摆烂": ("accompany",),
+    "沉默": ("accompany",),
+    "无语": ("accompany",),
+    "等待": ("accompany",),
+}
+
+# 道歉候选的**动作证据**：图里必须真的出现这些动作之一，才可能被当成道歉。
+# 注意：cat-035「谢谢鞠躬猫」的鞠躬语义是感谢，不是道歉——所以它不在默认
+# apology 名单里，需要人工在 intent_overlay.json 里显式标注才可能被选中。
+APOLOGY_ACTION_EVIDENCE = ("鞠躬", "低头", "递东西", "双手合十", "缩成一团")

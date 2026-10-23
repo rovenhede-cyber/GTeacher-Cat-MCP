@@ -66,7 +66,13 @@ GTeacher-Cat-MCP
 │   表情检索：拉库 / 语境过滤 / 打分 / 稳定选择
 │
 ├── emotion_engine.py
-│   文本 -> 情绪组、意图、动作、强度、危机/技术判定
+│   文本 -> 情绪组、意图、动作、强度、危机/技术判定（+R5 助手意图）
+│
+├── intent_engine.py
+│   R5 意图引擎：意图规范化/推导、图片行为（overlay > 推导 > neutral）
+│
+├── intent_overlay.json
+│   R5 人工标注：图片表达行为 + 证据（校验时必须能在元数据里找到原文）
 │
 ├── trigger_engine.py
 │   发送闸门（危机、技术任务、无信号不发送）
@@ -85,6 +91,12 @@ GTeacher-Cat-MCP
 │
 ├── tools/explain.py
 │   本地排查：打印分析、过滤结果与候选排名
+│
+├── tools/r5_compare.py
+│   R4 / R5(auto) 逐条语义对照（生成 Markdown）
+│
+├── tools/freeze_baseline.py
+│   改代码前冻结选择结果，作为 off 模式一致性基准
 │
 ├── requirements.txt
 │   Python依赖
@@ -152,22 +164,22 @@ Return:
 
 ---
 
-# 🧠 选图逻辑（v0.4.0，r4 兼容修复）
+# 🧠 选图逻辑（v0.5.0，R5 助手回应意图）
 
 ```
-user_emotional_context
+user_emotional_context + assistant_response_intent(可选)
         │
         ▼
 emotion_engine.analyze_context()   -> emotion(情绪组) / intent / actions / intensity / crisis / serious
-        │
+        │                             + assistant_intent（R5：调用方显式给，或按文本推导）
         ▼
 trigger_engine.should_send_sticker()  -> 否：直接返回（危机 / 技术任务 / 无信号）
-        │
+        │                             ← 意图不参与这一层，闸门语义与 R4 完全一致
         ▼
 sticker_engine.apply_filters()     -> avoid_when 语境 / relationship / 持刀类语境
-        │
+        │                             ← 意图也只能在过滤之后的候选里挑
         ▼
-sticker_engine.score_item()        -> 情绪组 + 关键词 + 动作意图 + 强度区间 + priority 排序权重
+sticker_engine.score_item()        -> 情绪组 + 关键词 + 动作意图 + 强度区间 + （auto）意图行为 + priority
         │
         ▼
 rank: (-score, -priority, id)      -> 稳定取第一，同分不随机
@@ -189,6 +201,18 @@ rank: (-score, -priority, id)      -> 稳定取第一，同分不随机
 | 距区间 2 分 | -8（`W_INTENSITY_OUT`） | 抑制错误强度 |
 | 距区间 n>2 分 | -8 + (n-2)×(-2)（`W_INTENSITY_OUT_STEP`） | 越远扣得越多 |
 | priority | `priority × 0.2` | **只是排序权重**，不是情绪强度 |
+
+R5 意图项（**只在 `R5_INTENT_MODE=auto` 时参与打分**）：
+
+| 项 | 默认分 | 说明 |
+| --- | --- | --- |
+| 意图与图片行为精确一致 | +8（`W_INTENT_EXACT`） | 如 intent=`teasing` 命中行为 `teasing` 的图 |
+| 同家族 | +4（`W_INTENT_FAMILY`） | support / positive / repair / play / align 五个家族 |
+| 明显矛盾 | -10（`W_INTENT_CONFLICT`） | 只扣分，**不做过滤**（会不会被选中仍受阈值约束） |
+| 助手视角表达 | +2（`W_INTENT_PERSONA`） | 道谢/陪伴/鼓励这类"我在表达"的图 |
+| 情绪组命中（已知意图时） | +2.5/组（`W_EMOTION_WHEN_INTENT`） | 比默认 5 低：意图比"情绪对上"更接近该发哪张 |
+
+已知意图时不再叠加 R4 的 `intent_scene`（那只是"场景≈意图"的代理分，会与新意图项重复计分）。
 
 强度与字段的边界：
 
@@ -231,23 +255,136 @@ rank: (-score, -priority, id)      -> 稳定取第一，同分不随机
 
 强度只来自**语气线索**，不再用命中词数量堆叠；索图时取索图语气，自述时取用户语气。
 
+### 助手回应意图（R5）
+
+前四层描述的是「用户怎么样」。R5 增加第五层：**助手这条回复想做什么**。
+
+10 类意图（一条上下文只推导一个）：
+
+| 意图 | 含义 | 典型场景 |
+| --- | --- | --- |
+| `comfort` | 安慰 | 实验失败、委屈、崩溃 |
+| `accompany` | 陪伴 | 好累、晚安、摆烂 |
+| `encourage` | 鼓励 | 紧张、期待 |
+| `celebrate` | 庆祝 | 拿到 offer、通过考试 |
+| `gratitude` | 感谢 | 谢谢一直帮我 |
+| `affection` | 亲密 | 抱抱、亲亲、比心、求婚 |
+| `apology` | 道歉 | 我错了（见下） |
+| `teasing` | 打趣 | 玩笑式吐槽、狗头 |
+| `agree` | 认同 | 对、就是这样 |
+| `acknowledge` | 收到 | 收到、明白 |
+
+- **调用方优先**：ChatGPT 是唯一知道"我这条回复想做什么"的一方，可以显式传
+  `assistant_response_intent`。服务端**看不到**会话，也读不到助手尚未发出的回复，
+  只能看见传进来的字符串。不传或传非法值时按文本推导。
+- **图片行为**来自 `intent_overlay.json`（人工标注，每条带 `evidence`，必须是图片元数据里真实存在的原文）
+  > 规则推导（`scene` → 行为） > `neutral`。人工标注永不被推导覆盖。
+- **道歉不做推导**：道歉图必须在 `intent_overlay.json` 里人工标注 `apology` 才会被选中；
+  当前 77 张里没有一张被确认为道歉动作（`cat-035 谢谢鞠躬猫` 的鞠躬语义是**感谢**）。
+  所以 `intent=apology` 默认返回 None，日志写 `fallback_reason=apology_no_candidate`，
+  **不会**拿感谢图或安慰图顶替。
+
+三模式（`R5_INTENT_MODE`，默认 `shadow`）：
+
+| 模式 | 行为 | 用途 |
+| --- | --- | --- |
+| `off` | 完全不看意图，自动选图结果与 R4 逐条一致（唯一例外是第 4 条的安全收紧） | 一键回滚 |
+| `shadow` | 算一遍"开 auto 会选谁"，只写日志（`r5_shadow_*`），**返回仍是 R4 结果** | 先观察再切换 |
+| `auto` | 意图参与打分 | 正式启用 |
+
+安全不变式（意图不得绕过任何原有闸门）：
+
+1. 危机表达 → 一律不发，即使 `assistant_response_intent=celebrate`。
+2. 技术/严肃任务 → 不发（例外只有显式索图与 `sticker_id`，与 R4 一致）。
+3. `relationship` / `avoid_when` / 持刀类过滤**先于**意图加分：意图不能"赎买"已被过滤的图。
+4. `sticker_id` 精确选图仍受危机、关系、`avoid_when` 约束（R5 收紧；R4 可绕过）。
+5. 非法意图值 → 告警 + 回落推导，不抛异常。
+6. `intent_overlay.json` 缺失 → 静默降级为规则推导；损坏/证据不符 → 写 ERROR 日志并**降级**为规则推导，
+   不让整个选图链路（含 `off` 回滚）跟着失效。
+
+### 弱信号显式索图兜底（R7.1）
+
+"发张猫猫" 这类**要了图但没说要什么**的请求，R5 会走到 `no_request_signal` 返回 None。
+R7.1 增加一层兜底：只在**全部**条件成立时返回一张通用安全图。
+
+| 条件 | 说明 |
+| --- | --- |
+| `explicit_request=True` | 只认客户端显式声明；原文像索图但没声明的不兜底 |
+| 原文有真实索图表达 | `fallback_engine.request_evidence()`：交付动词 + 图片对象，否定语境（"别发猫猫"）不算 |
+| `signal_count == 0` | 有任何情绪/动作/场景/画面信号时交给正常选图 |
+| 无危机 | 安全闸门先拦，兜底再守一次 |
+| 池里仍有通用安全图 | 候选必须过 `apply_filters`（关系/`avoid_when`/危险图），再过通用性校验 |
+
+通用性校验（只看图库已有元数据，本图库没有 accompany/cute 之类的英文字段）：
+情绪组必须全部属于 `{开心, 平静}`、**没有** `relationship` 声明、文本字段不含
+亲密/暧昧/攻击/危险/悲伤/不宜场合标记。候选顺序固定为
+`fallback_engine.GENERIC_CANDIDATE_ORDER`（人工确认），因此结果可复现：
+不做打分、不随机、不看意图。
+
+| 模式 | 行为 |
+| --- | --- |
+| `off` | 不评估，与 R4 逐条一致（连预测日志都不写） |
+| `shadow` | 返回仍是 None，只写 `r71_shadow r71_would_select=cat-xxx` |
+| `auto` | 条件成立才发通用图，`trace["reason"]="generic_fallback"` |
+
+诊断字段：`fallback_eligible` / `fallback_reason` / `fallback_selected_id` /
+`fallback_block_reason`（取值：`not_explicit_request` / `explicit_text_missing` /
+`signals_present` / `blocked_by_safety` / `no_generic_candidate`）。
+
 ### 兼容旧接口
 
 | 旧调用 | 现在的行为 |
 | --- | --- |
 | `search_sticker(ctx, deterministic=True/False)` | 支持；True 按 score→priority→id 稳定取第一，False 在近平票集合里随机 |
-| `search_sticker(ctx, sticker_id="cat-009")` | 精确返回；不存在抛 `StickerNotFoundError` |
-| `load_library(force_refresh=True)` / `load_library(ttl_seconds=5)` | 支持；默认 TTL 300s，`refresh_library()` 强刷 |
+| `search_sticker(ctx, sticker_id="cat-009")` | 精确返回；不存在抛 `StickerNotFoundError`；危机/关系/avoid_when 不通过时返回 `None` |
+| `load_library(force=True)` | 支持；跳过 TTL 但**不改 URL**（保持旧调用方请求形状） |
+| `load_library(force_refresh=True)` / `refresh_library()` | 支持；强刷并追加 `?v=<ts>` 绕过 raw/CDN 缓存（普通读取不加参数） |
+| `load_library(ttl_seconds=5)` | 支持；默认 TTL 300s |
+| `search_sticker(ctx, trace={})` / `select_sticker(ctx, trace={})` | 新增**可选**参数，回填 `{"reason": …}` 供调用方区分失败原因；不传时行为完全不变 |
 | `except requests.RequestException` | `StickerLibraryError` 同时继承 `requests.RequestException`，旧捕获仍生效 |
 | 图片下载 mock | 改成 mock `server.fetch_image`（下载逻辑已迁到 `sticker_engine.fetch_image`） |
+
+### 联调与诊断（R5 联调后新增）
+
+分不清“闸门拦住”“输入没信号”“图库没这张”是最容易误判的地方，所以三者都留了明确出口：
+
+| 入口 | 用途 |
+| --- | --- |
+| `python tools/diagnose.py "话" --mode auto --explicit --intent celebrate` | 一条命令打印：模式、图库版本/条数、三层语义、**闸门结果+原因**、过滤前后数量与原因分布、候选打分、最终选择与行为标注。`--json` 供脚本消费 |
+| `python tools/mcp_smoke.py --mode auto` | 真实 HTTP 联调：本地图库站点 + 隔离端口 MCP 子进程 + SDK 客户端，跑 9 个场景并回显服务端诊断日志。不碰 8000/8001/8010 |
+| `python tools/mcp_smoke.py --url http://127.0.0.1:8010/mcp` | 只读探测**已在运行**的服务（不重启它），用来核对线上是否拿到了用户原话 |
+| `python -m pytest tests/test_mcp_e2e.py -q` | 同一套链路的自动化版本（19 个用例，含初始化/schema/返图/无候选/危机/三模式/R7.1 兜底） |
+
+> `tools/diagnose.py` 的输出固定为 **UTF-8**（含 `--json`），重定向到文件或管道时也成立，Windows 默认 CP936 下无需设 `PYTHONUTF8=1`；日志与告警只走 stderr，stdout 可直接 `json.loads`。
+
+服务端日志关键字：
+
+| 日志 | 含义 |
+| --- | --- |
+| `r5_input input_len=… signal_count=…` | 收到的文本长度与识别到的信号类别数。**`signal_count=0` 说明传入文本对选图毫无信息量**，通常是客户端没把用户原话传进来 |
+| `trigger_result … gate_reason=…` | 闸门结论与原因：`crisis` / `explicit_request` / `serious_task` / `scene` / `signal` / `no_signal` / `help_only` |
+| `r5_outcome result=none reason=…` | 走到了选图但没选出图的确切原因：`no_request_signal` / `requested_emotion_unavailable` / `visual_feature_unavailable` / `no_semantic_match` / `apology_no_candidate` |
+
+对外文案也带原因（前缀保持不变，便于旧客户端判断）：
+
+- `user_emotional_context` 为空 → “没有收到用户原话……”（不再被误读成“场景不需要发图”）
+- 闸门无信号 → “当前场景不需要发送猫猫（未识别到情绪/动作/场景信号……）”
+- 选不出图 → “没有找到合适猫猫（没识别到具体情绪或画面要求 / 图库里没有这个情绪 …）”
+
+> `assistant_response_intent` 只能影响**闸门之后**的排序，不能把 `signal_count=0` 的请求“撑”出图来，
+> 也不能绕过危机 / 严肃任务 / 关系 / `avoid_when`。
 
 本地验证：
 
 ```bash
 pip install -r requirements.txt -r requirements-dev.txt
-python -m pytest tests -q                       # 145 个用例，全部离线
+python -m pytest tests -q                       # 341 个用例，全部离线（含 19 个 MCP 端到端）
 python tools/explain.py "我有点难过，抱抱我"        # 看分析 + 过滤 + 候选排名
-python tools/explain.py "爱你，媳妇～" --relationship intimate
+python tools/explain.py "实验又失败了" --mode auto          # 看意图参与后的排名
+python tools/explain.py "抱歉" --intent apology --mode auto # 看道歉无图时的行为
+python tools/diagnose.py "哥哥！我拿到 offer 啦！！！" --intent celebrate   # 全链路诊断
+python tools/mcp_smoke.py --mode auto                      # 真实 HTTP 联调（隔离端口）
+python tools/r5_compare.py --all-rel --out r5_diff.md      # R4 vs R5 逐条对照
 ```
 
 部署注意：
@@ -256,6 +393,8 @@ python tools/explain.py "爱你，媳妇～" --relationship intimate
 - `cat-042` 的 `relationship` 是 `["亲密关系","亲昵角色扮演"]`：默认 `intimate` 下可以正常被选中；
   显式传 `friend` / `formal` / `unknown` 时会被过滤掉。
 - 部署时可用 `DEFAULT_RELATIONSHIP_CONTEXT` 切换默认语境（见 `.env.example`），改动无需改代码。
+- **换端口要同步改 `server.py` 的 `allowed_hosts`**：传输层只放行 `cat.hedecat.cc` / `localhost` /
+  `127.0.0.1` / `127.0.0.1:8000`，未列入的 `Host: 127.0.0.1:<新端口>` 会直接被 **421 Misdirected Request** 拒绝。
 
 ---
 
@@ -291,8 +430,28 @@ Example:
 ![GTeacher Cat MCP Demo](docs/demo.png)
 
 📌 Version History
-v0.4.0
+v0.5.0
 Current version.
+Added:
+- **R5 助手回应意图**：新增第三层语义（用户情绪 / 对话场景 / 助手回应意图 + 表情包表达行为），
+  10 类意图 + 5 个近义家族；图片行为走 `/intent_overlay.json` 人工标注（带证据校验），
+  缺失时按 `scene` 规则推导，推导永不到 `apology`
+- 接口只新增一个可选参数 `assistant_response_intent`（旧 4 个参数签名与语义不变）
+- `R5_INTENT_MODE`：`off` / `shadow`（默认，只写观察日志）/ `auto` 三模式
+- 缓存绕过：`force_refresh` / `refresh_library()` 追加 `?v=<ts>`，普通 TTL 读取不变
+- 安全收紧：`sticker_id` 精确选图也受危机 / 关系 / `avoid_when` 约束
+- 标注文件容错：`intent_overlay.json` 损坏时写 ERROR 日志并降级为规则推导（不再拖垮选图与 `off` 回滚）
+- 联调加固：`r5_input` / `gate_reason` / `r5_outcome` 三类诊断日志；空上下文与“零信号”有独立文案；
+  意图分不再能把零用户信号的索图撑出图；`tools/diagnose.py` + `tools/mcp_smoke.py` + MCP 端到端测试
+- 新增测试 180 个（合计 341，全部离线）；`tools/r5_compare.py` 生成 R4/R5 逐条对照；
+  冻结 `tests/fixtures/r4_baseline_samples.json`（40 语料 × 3 关系）作为 off 模式一致性基准
+- Windows 编码兼容：`tools/diagnose.py` 在输出边界固定 UTF-8（stdout/stderr），
+  CP936 默认环境下重定向/管道取 `--json` 不再 `UnicodeDecodeError`，无需 `PYTHONUTF8=1`
+- **R7.1 弱信号显式索图兜底**：`explicit_request=True` + 原文确有索图表达 + `signal_count=0` 时，
+  返回一张通用安全图（情绪组 ∈ {开心, 平静}、无关系声明、无亲密/攻击/悲伤标记），
+  固定候选顺序、不随机；`off` 不评估、`shadow` 只记 `r71_shadow` 预测、`auto` 才生效；
+  新增 `fallback_eligible` / `fallback_reason` / `fallback_selected_id` / `fallback_block_reason` 诊断字段
+v0.4.0
 Added / Fixed:
 - 修复情绪匹配永远不生效（分析侧输出英文 sad/happy，图库侧是中文标签）
 - 修复 `intent` 匹配失效（instructions.json 里没有 intent 字段）

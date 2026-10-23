@@ -1,0 +1,740 @@
+{
+  "meta": {
+    "stage": "R4",
+    "note": "改代码之前冻结的选择结果；off 模式必须逐条一致",
+    "git_rev": "5efb749",
+    "git_branch": "main",
+    "library_version": "3.0",
+    "library_count": 77,
+    "library_md5": "c87f69941f4eb6cadbd9791fb1da626f",
+    "library_md5_note": "CRLF 归一化后计算",
+    "corpus_size": 40,
+    "relationships": [
+      "intimate",
+      "friend",
+      "formal"
+    ]
+  },
+  "samples": [
+    {
+      "text": "今天好开心",
+      "relationship": "intimate",
+      "gate": true,
+      "id": "cat-067"
+    },
+    {
+      "text": "今天好开心",
+      "relationship": "friend",
+      "gate": true,
+      "id": "cat-067"
+    },
+    {
+      "text": "今天好开心",
+      "relationship": "formal",
+      "gate": true,
+      "id": "cat-067"
+    },
+    {
+      "text": "终于通过了考试，太开心了",
+      "relationship": "intimate",
+      "gate": true,
+      "id": "cat-020"
+    },
+    {
+      "text": "终于通过了考试，太开心了",
+      "relationship": "friend",
+      "gate": true,
+      "id": "cat-020"
+    },
+    {
+      "text": "终于通过了考试，太开心了",
+      "relationship": "formal",
+      "gate": true,
+      "id": "cat-020"
+    },
+    {
+      "text": "实验又失败了，好难受",
+      "relationship": "intimate",
+      "gate": true,
+      "id": "cat-049"
+    },
+    {
+      "text": "实验又失败了，好难受",
+      "relationship": "friend",
+      "gate": true,
+      "id": "cat-049"
+    },
+    {
+      "text": "实验又失败了，好难受",
+      "relationship": "formal",
+      "gate": true,
+      "id": "cat-049"
+    },
+    {
+      "text": "抱抱我",
+      "relationship": "intimate",
+      "gate": true,
+      "id": "cat-005"
+    },
+    {
+      "text": "抱抱我",
+      "relationship": "friend",
+      "gate": true,
+      "id": "cat-005"
+    },
+    {
+      "text": "抱抱我",
+      "relationship": "formal",
+      "gate": true,
+      "id": "cat-005"
+    },
+    {
+      "text": "想亲亲你",
+      "relationship": "intimate",
+      "gate": true,
+      "id": "cat-025"
+    },
+    {
+      "text": "想亲亲你",
+      "relationship": "friend",
+      "gate": true,
+      "id": "cat-025"
+    },
+    {
+      "text": "想亲亲你",
+      "relationship": "formal",
+      "gate": true,
+      "id": "cat-025"
+    },
+    {
+      "text": "给你比心",
+      "relationship": "intimate",
+      "gate": true,
+      "id": "cat-010"
+    },
+    {
+      "text": "给你比心",
+      "relationship": "friend",
+      "gate": true,
+      "id": "cat-010"
+    },
+    {
+      "text": "给你比心",
+      "relationship": "formal",
+      "gate": true,
+      "id": "cat-010"
+    },
+    {
+      "text": "送花给你",
+      "relationship": "intimate",
+      "gate": true,
+      "id": "cat-037"
+    },
+    {
+      "text": "送花给你",
+      "relationship": "friend",
+      "gate": true,
+      "id": "cat-037"
+    },
+    {
+      "text": "送花给你",
+      "relationship": "formal",
+      "gate": true,
+      "id": "cat-037"
+    },
+    {
+      "text": "我要单膝跪地求婚，把戒指给你",
+      "relationship": "intimate",
+      "gate": true,
+      "id": "cat-006"
+    },
+    {
+      "text": "我要单膝跪地求婚，把戒指给你",
+      "relationship": "friend",
+      "gate": true,
+      "id": "cat-006"
+    },
+    {
+      "text": "我要单膝跪地求婚，把戒指给你",
+      "relationship": "formal",
+      "gate": true,
+      "id": "cat-006"
+    },
+    {
+      "text": "谢谢你一直帮我",
+      "relationship": "intimate",
+      "gate": true,
+      "id": "cat-035"
+    },
+    {
+      "text": "谢谢你一直帮我",
+      "relationship": "friend",
+      "gate": true,
+      "id": "cat-035"
+    },
+    {
+      "text": "谢谢你一直帮我",
+      "relationship": "formal",
+      "gate": true,
+      "id": "cat-035"
+    },
+    {
+      "text": "哈哈你怎么又迟到了，狗头",
+      "relationship": "intimate",
+      "gate": true,
+      "id": "cat-019"
+    },
+    {
+      "text": "哈哈你怎么又迟到了，狗头",
+      "relationship": "friend",
+      "gate": true,
+      "id": "cat-019"
+    },
+    {
+      "text": "哈哈你怎么又迟到了，狗头",
+      "relationship": "formal",
+      "gate": true,
+      "id": "cat-019"
+    },
+    {
+      "text": "今天下午三点开会",
+      "relationship": "intimate",
+      "gate": false,
+      "id": null
+    },
+    {
+      "text": "今天下午三点开会",
+      "relationship": "friend",
+      "gate": false,
+      "id": null
+    },
+    {
+      "text": "今天下午三点开会",
+      "relationship": "formal",
+      "gate": false,
+      "id": null
+    },
+    {
+      "text": "嗯",
+      "relationship": "intimate",
+      "gate": false,
+      "id": null
+    },
+    {
+      "text": "嗯",
+      "relationship": "friend",
+      "gate": false,
+      "id": null
+    },
+    {
+      "text": "嗯",
+      "relationship": "formal",
+      "gate": false,
+      "id": null
+    },
+    {
+      "text": "有点委屈",
+      "relationship": "intimate",
+      "gate": true,
+      "id": "cat-005"
+    },
+    {
+      "text": "有点委屈",
+      "relationship": "friend",
+      "gate": true,
+      "id": "cat-005"
+    },
+    {
+      "text": "有点委屈",
+      "relationship": "formal",
+      "gate": true,
+      "id": "cat-005"
+    },
+    {
+      "text": "唉，好累",
+      "relationship": "intimate",
+      "gate": true,
+      "id": "cat-060"
+    },
+    {
+      "text": "唉，好累",
+      "relationship": "friend",
+      "gate": true,
+      "id": "cat-060"
+    },
+    {
+      "text": "唉，好累",
+      "relationship": "formal",
+      "gate": true,
+      "id": "cat-060"
+    },
+    {
+      "text": "我真的不想活了",
+      "relationship": "intimate",
+      "gate": false,
+      "id": null
+    },
+    {
+      "text": "我真的不想活了",
+      "relationship": "friend",
+      "gate": false,
+      "id": null
+    },
+    {
+      "text": "我真的不想活了",
+      "relationship": "formal",
+      "gate": false,
+      "id": null
+    },
+    {
+      "text": "这个 API 报 500，怎么排查",
+      "relationship": "intimate",
+      "gate": false,
+      "id": null
+    },
+    {
+      "text": "这个 API 报 500，怎么排查",
+      "relationship": "friend",
+      "gate": false,
+      "id": null
+    },
+    {
+      "text": "这个 API 报 500，怎么排查",
+      "relationship": "formal",
+      "gate": false,
+      "id": null
+    },
+    {
+      "text": "论文写不出来，好崩溃",
+      "relationship": "intimate",
+      "gate": true,
+      "id": "cat-053"
+    },
+    {
+      "text": "论文写不出来，好崩溃",
+      "relationship": "friend",
+      "gate": true,
+      "id": "cat-053"
+    },
+    {
+      "text": "论文写不出来，好崩溃",
+      "relationship": "formal",
+      "gate": true,
+      "id": "cat-053"
+    },
+    {
+      "text": "我有点生气",
+      "relationship": "intimate",
+      "gate": true,
+      "id": "cat-026"
+    },
+    {
+      "text": "我有点生气",
+      "relationship": "friend",
+      "gate": true,
+      "id": "cat-026"
+    },
+    {
+      "text": "我有点生气",
+      "relationship": "formal",
+      "gate": true,
+      "id": "cat-026"
+    },
+    {
+      "text": "我真的很生气",
+      "relationship": "intimate",
+      "gate": true,
+      "id": "cat-008"
+    },
+    {
+      "text": "我真的很生气",
+      "relationship": "friend",
+      "gate": true,
+      "id": "cat-008"
+    },
+    {
+      "text": "我真的很生气",
+      "relationship": "formal",
+      "gate": true,
+      "id": "cat-008"
+    },
+    {
+      "text": "我真的气死了！！",
+      "relationship": "intimate",
+      "gate": true,
+      "id": "cat-053"
+    },
+    {
+      "text": "我真的气死了！！",
+      "relationship": "friend",
+      "gate": true,
+      "id": "cat-053"
+    },
+    {
+      "text": "我真的气死了！！",
+      "relationship": "formal",
+      "gate": true,
+      "id": "cat-053"
+    },
+    {
+      "text": "宝宝，我今天好生气",
+      "relationship": "intimate",
+      "gate": true,
+      "id": "cat-008"
+    },
+    {
+      "text": "宝宝，我今天好生气",
+      "relationship": "friend",
+      "gate": true,
+      "id": "cat-008"
+    },
+    {
+      "text": "宝宝，我今天好生气",
+      "relationship": "formal",
+      "gate": true,
+      "id": "cat-008"
+    },
+    {
+      "text": "我爱你，媳妇～",
+      "relationship": "intimate",
+      "gate": true,
+      "id": "cat-010"
+    },
+    {
+      "text": "我爱你，媳妇～",
+      "relationship": "friend",
+      "gate": true,
+      "id": "cat-010"
+    },
+    {
+      "text": "我爱你，媳妇～",
+      "relationship": "formal",
+      "gate": true,
+      "id": "cat-010"
+    },
+    {
+      "text": "想死你了，什么时候回来",
+      "relationship": "intimate",
+      "gate": false,
+      "id": null
+    },
+    {
+      "text": "想死你了，什么时候回来",
+      "relationship": "friend",
+      "gate": false,
+      "id": null
+    },
+    {
+      "text": "想死你了，什么时候回来",
+      "relationship": "formal",
+      "gate": false,
+      "id": null
+    },
+    {
+      "text": "我今天被领导骂了，好委屈",
+      "relationship": "intimate",
+      "gate": true,
+      "id": "cat-002"
+    },
+    {
+      "text": "我今天被领导骂了，好委屈",
+      "relationship": "friend",
+      "gate": true,
+      "id": "cat-002"
+    },
+    {
+      "text": "我今天被领导骂了，好委屈",
+      "relationship": "formal",
+      "gate": true,
+      "id": "cat-002"
+    },
+    {
+      "text": "明天要答辩了，好紧张",
+      "relationship": "intimate",
+      "gate": false,
+      "id": null
+    },
+    {
+      "text": "明天要答辩了，好紧张",
+      "relationship": "friend",
+      "gate": false,
+      "id": null
+    },
+    {
+      "text": "明天要答辩了，好紧张",
+      "relationship": "formal",
+      "gate": false,
+      "id": null
+    },
+    {
+      "text": "我一直加班到凌晨，扛不住了",
+      "relationship": "intimate",
+      "gate": true,
+      "id": "cat-060"
+    },
+    {
+      "text": "我一直加班到凌晨，扛不住了",
+      "relationship": "friend",
+      "gate": true,
+      "id": "cat-060"
+    },
+    {
+      "text": "我一直加班到凌晨，扛不住了",
+      "relationship": "formal",
+      "gate": true,
+      "id": "cat-060"
+    },
+    {
+      "text": "这幅画好看吗",
+      "relationship": "intimate",
+      "gate": false,
+      "id": null
+    },
+    {
+      "text": "这幅画好看吗",
+      "relationship": "friend",
+      "gate": false,
+      "id": null
+    },
+    {
+      "text": "这幅画好看吗",
+      "relationship": "formal",
+      "gate": false,
+      "id": null
+    },
+    {
+      "text": "哈哈笑死我了",
+      "relationship": "intimate",
+      "gate": true,
+      "id": "cat-019"
+    },
+    {
+      "text": "哈哈笑死我了",
+      "relationship": "friend",
+      "gate": true,
+      "id": "cat-019"
+    },
+    {
+      "text": "哈哈笑死我了",
+      "relationship": "formal",
+      "gate": true,
+      "id": "cat-019"
+    },
+    {
+      "text": "好困，先睡了晚安",
+      "relationship": "intimate",
+      "gate": true,
+      "id": "cat-070"
+    },
+    {
+      "text": "好困，先睡了晚安",
+      "relationship": "friend",
+      "gate": true,
+      "id": "cat-070"
+    },
+    {
+      "text": "好困，先睡了晚安",
+      "relationship": "formal",
+      "gate": true,
+      "id": "cat-070"
+    },
+    {
+      "text": "我真的服了，这破系统又崩了",
+      "relationship": "intimate",
+      "gate": true,
+      "id": "cat-014"
+    },
+    {
+      "text": "我真的服了，这破系统又崩了",
+      "relationship": "friend",
+      "gate": true,
+      "id": "cat-014"
+    },
+    {
+      "text": "我真的服了，这破系统又崩了",
+      "relationship": "formal",
+      "gate": true,
+      "id": "cat-014"
+    },
+    {
+      "text": "我们吵架了，他动手了，我很害怕",
+      "relationship": "intimate",
+      "gate": false,
+      "id": null
+    },
+    {
+      "text": "我们吵架了，他动手了，我很害怕",
+      "relationship": "friend",
+      "gate": false,
+      "id": null
+    },
+    {
+      "text": "我们吵架了，他动手了，我很害怕",
+      "relationship": "formal",
+      "gate": false,
+      "id": null
+    },
+    {
+      "text": "医生说我需要住院观察",
+      "relationship": "intimate",
+      "gate": false,
+      "id": null
+    },
+    {
+      "text": "医生说我需要住院观察",
+      "relationship": "friend",
+      "gate": false,
+      "id": null
+    },
+    {
+      "text": "医生说我需要住院观察",
+      "relationship": "formal",
+      "gate": false,
+      "id": null
+    },
+    {
+      "text": "今天天气不错",
+      "relationship": "intimate",
+      "gate": false,
+      "id": null
+    },
+    {
+      "text": "今天天气不错",
+      "relationship": "friend",
+      "gate": false,
+      "id": null
+    },
+    {
+      "text": "今天天气不错",
+      "relationship": "formal",
+      "gate": false,
+      "id": null
+    },
+    {
+      "text": "我拿到 offer 了！",
+      "relationship": "intimate",
+      "gate": true,
+      "id": "cat-019"
+    },
+    {
+      "text": "我拿到 offer 了！",
+      "relationship": "friend",
+      "gate": true,
+      "id": "cat-019"
+    },
+    {
+      "text": "我拿到 offer 了！",
+      "relationship": "formal",
+      "gate": true,
+      "id": "cat-019"
+    },
+    {
+      "text": "你能教我怎么做这个吗",
+      "relationship": "intimate",
+      "gate": false,
+      "id": null
+    },
+    {
+      "text": "你能教我怎么做这个吗",
+      "relationship": "friend",
+      "gate": false,
+      "id": null
+    },
+    {
+      "text": "你能教我怎么做这个吗",
+      "relationship": "formal",
+      "gate": false,
+      "id": null
+    },
+    {
+      "text": "帮我写一个脚本",
+      "relationship": "intimate",
+      "gate": false,
+      "id": null
+    },
+    {
+      "text": "帮我写一个脚本",
+      "relationship": "friend",
+      "gate": false,
+      "id": null
+    },
+    {
+      "text": "帮我写一个脚本",
+      "relationship": "formal",
+      "gate": false,
+      "id": null
+    },
+    {
+      "text": "我好羡慕你",
+      "relationship": "intimate",
+      "gate": false,
+      "id": null
+    },
+    {
+      "text": "我好羡慕你",
+      "relationship": "friend",
+      "gate": false,
+      "id": null
+    },
+    {
+      "text": "我好羡慕你",
+      "relationship": "formal",
+      "gate": false,
+      "id": null
+    },
+    {
+      "text": "我觉得自己很失败",
+      "relationship": "intimate",
+      "gate": true,
+      "id": "cat-005"
+    },
+    {
+      "text": "我觉得自己很失败",
+      "relationship": "friend",
+      "gate": true,
+      "id": "cat-005"
+    },
+    {
+      "text": "我觉得自己很失败",
+      "relationship": "formal",
+      "gate": true,
+      "id": "cat-005"
+    },
+    {
+      "text": "你给我等着，狗头",
+      "relationship": "intimate",
+      "gate": false,
+      "id": null
+    },
+    {
+      "text": "你给我等着，狗头",
+      "relationship": "friend",
+      "gate": false,
+      "id": null
+    },
+    {
+      "text": "你给我等着，狗头",
+      "relationship": "formal",
+      "gate": false,
+      "id": null
+    },
+    {
+      "text": "收到，马上处理",
+      "relationship": "intimate",
+      "gate": false,
+      "id": null
+    },
+    {
+      "text": "收到，马上处理",
+      "relationship": "friend",
+      "gate": false,
+      "id": null
+    },
+    {
+      "text": "收到，马上处理",
+      "relationship": "formal",
+      "gate": false,
+      "id": null
+    }
+  ]
+}

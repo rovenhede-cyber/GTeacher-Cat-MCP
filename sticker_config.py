@@ -25,6 +25,15 @@ RELATIONSHIPS = ("intimate", "friend", "formal", "unknown")
 
 DEFAULT_RELATIONSHIP_FALLBACK = "intimate"
 
+# R5 意图模式：off（回滚到 R4）/ shadow（只观察，返回仍是 R4 结果）/ auto（意图生效）
+INTENT_MODES = ("off", "shadow", "auto")
+DEFAULT_INTENT_MODE = "shadow"
+
+
+def _intent_mode():
+    raw = (os.getenv("R5_INTENT_MODE") or "").strip().lower()
+    return raw if raw in INTENT_MODES else DEFAULT_INTENT_MODE
+
 
 def _default_relationship():
     """DEFAULT_RELATIONSHIP_CONTEXT 的取值；非法值回落到 intimate 并保留告警线索。"""
@@ -62,6 +71,14 @@ def _values():
         # 距区间 2 分时的扣分起点（默认 -8），每多 1 分再叠加 intensity_out_step
         "intensity_out_of_range": _num("W_INTENSITY_OUT", -8.0),
         "intensity_out_step": _num("W_INTENSITY_OUT_STEP", -2.0),
+        # R5 助手回应意图（只在 R5_INTENT_MODE=auto 时参与打分）
+        "intent_exact": _num("W_INTENT_EXACT", 8.0),
+        "intent_family": _num("W_INTENT_FAMILY", 4.0),
+        "intent_conflict": _num("W_INTENT_CONFLICT", -10.0),
+        "intent_persona": _num("W_INTENT_PERSONA", 2.0),
+        # 已知意图时情绪组匹配的权重（低于默认 5.0：意图比情绪更接近"该发哪张"）
+        "emotion_when_intent": _num("W_EMOTION_WHEN_INTENT", 2.5),
+        "intent_mode": _intent_mode(),
         # 排序权重（很小，不能盖过语义与强度）
         "priority_weight": _num("W_PRIORITY", 0.2),
         # 阈值
@@ -87,6 +104,10 @@ class ScoringConfig:
         "trigger_action": "动作意图命中 trigger_actions",
         "action_fallback": "无 trigger_actions 时，动作意图命中 action",
         "intensity": "对话强度落在 intensity_range 内/边缘/区间外",
+        "intent_exact": "助手回应意图与图片表达行为精确一致",
+        "intent_family": "意图与图片行为同属一个近义家族",
+        "intent_conflict": "意图与图片行为明显矛盾（扣分，不参与过滤）",
+        "intent_persona": "图片是助手视角的表达（道谢/陪伴/鼓励），与意图叠加",
         "priority": "排序权重 = priority * priority_weight（只影响同分次序与轻微偏移）",
     }
 

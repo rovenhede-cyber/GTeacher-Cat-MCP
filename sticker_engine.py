@@ -20,16 +20,21 @@ import time
 import requests
 from dotenv import load_dotenv
 
+import intent_engine
 from emotion_engine import VISUAL_PATTERNS, EMOTION_LABELS
+from fallback_engine import evaluate as fallback_evaluate
+from fallback_engine import select_generic
 from logger_config import logger
 from sticker_config import CONFIG, RELATIONSHIPS
 from taxonomy import (
+    ASSISTANT_INTENTS,
     AVOID_TRIGGER_WORDS,
     DANGER_MARKERS,
     RELATIONSHIP_ALLOWED,
     group_of,
     item_groups,
 )
+from trigger_engine import gate_reason as should_send_sticker_reason
 from trigger_engine import should_send_sticker
 
 # 权重相关的 .env 读取已由 sticker_config 在创建 CONFIG 之前完成；
@@ -39,11 +44,20 @@ load_dotenv()
 DEFAULT_REPO_BASE = "https://raw.githubusercontent.com/rovenhede-cyber/stickersforGPT/main/"
 CACHE_TTL_SECONDS = 300
 
+# R5 三模式（值来自 sticker_config，可在 .env 里用 R5_INTENT_MODE 覆盖）
+INTENT_MODES = ("off", "shadow", "auto")
+
 _library_cache = None
 _library_loaded_at = 0.0
 _warned = set()
 
 LABEL_TO_GROUP = {label: group for group, label in EMOTION_LABELS.items()}
+
+
+def intent_mode():
+    """每次现读 CONFIG，便于测试与热更新（不缓存到模块级）。"""
+    mode = getattr(CONFIG, "intent_mode", "shadow")
+    return mode if mode in INTENT_MODES else "shadow"
 
 
 class StickerError(Exception):
@@ -68,8 +82,14 @@ def repo_base():
     return base.rstrip("/") + "/"
 
 
-def library_url():
-    return repo_base() + "instructions.json"
+def library_url(bust=False):
+    """图库地址。bust=True 时追加 ?v=<ts> 绕过 CDN 缓存（只给显式强刷用）。"""
+    url = repo_base() + "instructions.json"
+    if bust:
+        # 用 time.time() 而不是 monotonic：monotonic 是进程内相对时间，
+        # 每次重启都会归零，做缓存击穿键会撞车。
+        url += "?v=%d" % int(time.time() * 1000)
+    return url
 
 
 def image_base():
@@ -89,6 +109,8 @@ def set_library(data):
     if isinstance(data, list):
         data = {"stickers": data}
     items = [normalize_item(x) for x in data.get("stickers", [])]
+    # 人工标注写错（证据引用了不存在的文本）应当立刻暴露，而不是线上静默失效
+    intent_engine.validate_overlay(intent_engine.load_overlay(), items, warn_orphans=False)
     _library_cache = {"version": data.get("version"), "stickers": items}
     _library_loaded_at = time.monotonic()
     logger.info("Sticker library injected: %d entries", len(items))
@@ -110,10 +132,12 @@ def normalize_item(item):
 
 
 def load_library(force=False, force_refresh=False, ttl_seconds=None):
-    """返回图库。默认 TTL 缓存；force_refresh=True 立即重拉。"""
+    """返回图库。默认 TTL 缓存；force_refresh=True 立即重拉（并绕过 CDN 缓存）。"""
     global _library_cache, _library_loaded_at
 
-    force = bool(force or force_refresh)
+    # 只有显式 force_refresh 才改 URL；旧参数 force 保持原样（不改 URL，避免影响旧调用方）
+    refresh = bool(force_refresh)
+    force = bool(force or refresh)
     ttl = CACHE_TTL_SECONDS if ttl_seconds is None else max(0, ttl_seconds)
     now = time.monotonic()
 
@@ -124,11 +148,12 @@ def load_library(force=False, force_refresh=False, ttl_seconds=None):
         )
         return _library_cache
 
-    url = library_url()
+    url = library_url(bust=refresh)
     try:
         response = requests.get(url, timeout=15)
         response.raise_for_status()
     except requests.RequestException as exc:
+        # 强刷失败时保留旧缓存：宁可继续用上一次成功加载的库，也不要让服务空转
         raise StickerLibraryError(
             "表情库拉取失败：%s（%s）。请检查网络或 STICKER_REPO_URL 配置。" % (url, exc)
         ) from exc
@@ -150,6 +175,12 @@ def load_library(force=False, force_refresh=False, ttl_seconds=None):
         )
     for item in items:
         _check_mood_strength(item)
+    # 标注写坏（证据引用不存在 / JSON 损坏）要留 ERROR 日志，但不能拖垮整条选图链路：
+    # 否则连 R5_INTENT_MODE=off 这个回滚开关也会跟着失效（加载图库时都会校验）。
+    try:
+        intent_engine.validate_overlay(intent_engine.load_overlay(), items)
+    except intent_engine.OverlayError as exc:
+        intent_engine.disable_overlay(str(exc))
 
     _library_cache = {"version": data.get("version"), "stickers": items}
     _library_loaded_at = now
@@ -356,7 +387,12 @@ SCENE_BONUS = 6.0
 
 # ------------------------------------------------------------------ 打分
 def score_item(item, ctx):
-    """单图打分。intensity_range 参与打分；mood_strength 不打分；priority 只作排序权重。"""
+    """单图打分。intensity_range 参与打分；mood_strength 不打分；priority 只作排序权重。
+
+    意图项只在 auto 模式（或 shadow 的影子打分）里生效：
+    - `_intent_active` 显式为 False -> 不算意图（off / 返回给调用方的 R4 结果）
+    - 未提供该标记 -> 按 CONFIG.intent_mode 判断（直接调用 score_item 时用得上）
+    """
     breakdown = {}
     warnings = []
 
@@ -366,6 +402,13 @@ def score_item(item, ctx):
     scenes = ctx.get("scenes") or []
     intents = ctx.get("intent") or []
     intensity = (ctx.get("intensity") or 0) if user_groups else 0
+
+    active = ctx.get("_intent_active")
+    if active is None:
+        active = intent_mode() == "auto"
+    assistant_intent = ctx.get("assistant_intent") if active else None
+    if assistant_intent not in ASSISTANT_INTENTS:
+        assistant_intent = None
 
     tags = [str(x).lower() for x in item.get("tags", [])]
     name = str(item.get("name", "")).lower()
@@ -379,7 +422,10 @@ def score_item(item, ctx):
         groups = item_groups(item)
         matched = [g for g in user_groups if g in groups]
         if matched:
-            breakdown["emotion_group"] = CONFIG.emotion_group * len(matched[: CONFIG.max_emotion_groups])
+            # 已知助手意图时，情绪匹配降权：意图比"用户情绪对上了"更接近"该发哪张"
+            weight = CONFIG.emotion_when_intent if assistant_intent else CONFIG.emotion_group
+            breakdown["emotion_group"] = round(
+                weight * len(matched[: CONFIG.max_emotion_groups]), 4)
 
     if keywords:
         tag_hits = [k for k in keywords if k in tags]
@@ -412,10 +458,25 @@ def score_item(item, ctx):
     scene_hits = [s for s in scenes if s.lower() in item_scene]
     if scene_hits:
         breakdown["scene_hit"] = SCENE_BONUS
-    for intent in intents:
-        if set(item_scene) & INTENT_SCENES.get(intent, set()):
-            breakdown["intent_scene"] = round(SCENE_BONUS / 2, 3)
-            break
+    if not assistant_intent:
+        # R4 的 intent_scene 是"场景≈意图"的代理分。R5 已知真实意图时不再叠加，
+        # 否则同一个信号（scene=安慰）会被计两次，压过真正的行为匹配。
+        for intent in intents:
+            if set(item_scene) & INTENT_SCENES.get(intent, set()):
+                breakdown["intent_scene"] = round(SCENE_BONUS / 2, 3)
+                break
+
+    if assistant_intent:
+        behavior = intent_engine.behaviors_for(item)
+        behaviors = set(behavior["behaviors"])
+        if assistant_intent in behaviors:
+            breakdown["intent_exact"] = CONFIG.intent_exact
+        elif behaviors & intent_engine.family_behaviors(assistant_intent):
+            breakdown["intent_family"] = CONFIG.intent_family
+        if behaviors & intent_engine.conflicting(assistant_intent):
+            breakdown["intent_conflict"] = CONFIG.intent_conflict
+        if behavior["persona_fit"] == "assistant":
+            breakdown["intent_persona"] = CONFIG.intent_persona
 
     value, warning = _intensity_score(item, intensity)
     if value:
@@ -477,8 +538,13 @@ def rank_stickers(ctx, items=None, relationship="default"):
 
 
 # ------------------------------------------------------------------ 明确索图
-def _select_explicit(ctx, items, deterministic=True):
+def _select_explicit(ctx, items, deterministic=True, trace=None):
     raw_text = str(ctx.get("sticker_query") or ctx.get("original_text") or "").lower()
+
+    def fail(reason):
+        if trace is not None:
+            trace["reason"] = reason
+        return None
 
     # 1) 用户点名某张图
     named = [item for item in items
@@ -486,17 +552,26 @@ def _select_explicit(ctx, items, deterministic=True):
     if named:
         selected = max(named, key=lambda i: (len(str(i["name"])), i.get("priority", 5)))
         logger.info("sticker_selected mode=explicit_name selected_sticker_id=%s", selected.get("id"))
+        if trace is not None:
+            trace["reason"] = "explicit_name"
         return selected
 
     features = set(ctx.get("requested_visual_features") or [])
     requested = [LABEL_TO_GROUP.get(label, label) for label in ctx.get("requested_sticker_emotion") or []]
+
+    # 信号检查必须排在打分之前：auto 模式下意图加分本身会产生非零分，
+    # 如果放到 _rank 之后再判断，“零用户信号的索图”就会被意图分撑起来，
+    # 变成为了发图而发图。用户侧没有任何信号时，一律不猜。
+    if not (requested or features or ctx.get("actions") or ctx.get("keywords")):
+        logger.info("sticker_candidates count=0 reason=no_request_signal")
+        return fail("no_request_signal")
 
     pool = items
     if features:
         pool = [item for item in pool if features.issubset(visible_features(item))]
         if not pool:
             logger.info("sticker_candidates count=0 reason=visual_feature_unavailable")
-            return None
+            return fail("visual_feature_unavailable")
         logger.info("sticker_filter stage=visual filtered_candidates=%s", [i.get("id") for i in pool])
 
     if requested:
@@ -506,16 +581,10 @@ def _select_explicit(ctx, items, deterministic=True):
             logger.info("sticker_filter stage=emotion filtered_candidates=%s", [i.get("id") for i in pool])
         elif not features:
             logger.info("sticker_candidates count=0 reason=requested_emotion_unavailable")
-            return None
+            return fail("requested_emotion_unavailable")
 
     ranked = _rank(ctx, pool)
     if not ranked:
-        # 没有任何可识别信号（无请求情绪/无画面约束/无动作/无关键词）时，
-        # 不能退化成"按 priority 给一张"——直接返回 None。
-        has_signal = bool(requested or features or ctx.get("actions") or ctx.get("keywords"))
-        if not has_signal:
-            logger.info("sticker_candidates count=0 reason=no_request_signal")
-            return None
         query = str(ctx.get("sticker_query") or "")
         scored = [score_item(item, ctx) for item in pool]
         scored = [r for r in scored if r["score"] > CONFIG.min_score]
@@ -531,7 +600,7 @@ def _select_explicit(ctx, items, deterministic=True):
         ranked = scored
     if not ranked:
         logger.info("sticker_candidates count=0 fallback_reason=no_semantic_match")
-        return None
+        return fail("no_semantic_match")
 
     top = ranked[0]
     close = [r for r in ranked
@@ -546,10 +615,160 @@ def _select_explicit(ctx, items, deterministic=True):
         [(r["id"], r["score"], r["breakdown"].get("intensity"), intensity_bounds(r["item"])[1])
          for r in ranked[:5]],
     )
+    if trace is not None:
+        trace["reason"] = "selected"
     return selected
 
 
 # ------------------------------------------------------------------ 选择
+def _exact_pick(items, ctx, sticker_id):
+    """按 id 精确选图。仍受危机 / 关系 / avoid_when 约束（R5 安全不变式 I4）。"""
+    item = next((x for x in items if x.get("id") == sticker_id), None)
+    if item is None:
+        logger.warning("sticker_id_not_found id=%s", sticker_id)
+        raise StickerNotFoundError("未找到指定表情包 ID：%s" % sticker_id)
+
+    if ctx.get("crisis"):
+        logger.info("sticker_id_blocked id=%s reason=crisis", sticker_id)
+        return None
+
+    rel = ctx.get("relationship") or resolve_relationship(None)
+    allowed = RELATIONSHIP_ALLOWED.get(rel, RELATIONSHIP_ALLOWED["unknown"])
+    declared = set(item.get("relationship") or [])
+    if declared and not declared & allowed:
+        logger.info("sticker_id_blocked id=%s reason=relationship:%s", sticker_id, rel)
+        return None
+
+    avoid_words = _active_avoid_words(ctx)
+    hit = next((condition for condition in item.get("avoid_when", [])
+                if any(word in condition for word in avoid_words)), None)
+    if hit:
+        logger.info("sticker_id_blocked id=%s reason=avoid_when:%s", sticker_id, hit)
+        return None
+
+    logger.info("sticker_selected mode=exact selected_sticker_id=%s", sticker_id)
+    return item
+
+
+def _ranked_pick(ctx, items, deterministic, trace=None):
+    ranked = _rank(ctx, items)
+    if not ranked:
+        if trace is not None:
+            trace["reason"] = "no_semantic_match"
+        return None, []
+    top = ranked[0]
+    close = [r for r in ranked
+             if r["breakdown"].keys() == top["breakdown"].keys() and top["score"] - r["score"] <= 1]
+    selected = (random.choice([r["item"] for r in close])
+                if len(close) > 1 and not deterministic else top["item"])
+    if trace is not None:
+        trace["reason"] = "selected"
+    return selected, ranked
+
+
+def _choose(ctx, kept, deterministic, trace=None):
+    """在**已经过滤过**的候选里选一张（意图只能在这里起作用）。"""
+    if ctx.get("_intent_active") and ctx.get("assistant_intent") == "apology":
+        pool = [x for x in kept if "apology" in intent_engine.behaviors_for(x)["behaviors"]]
+        if not pool:
+            # 图库确实没有合格的道歉图：返回 None，绝不拿感谢/安慰图顶替
+            logger.info("r5_fallback fallback_reason=apology_no_candidate")
+            if trace is not None:
+                trace["reason"] = "apology_no_candidate"
+            return None
+        # 人工标注本身就是最强证据：候选池已由标注决定，语义分不足以筛选时按 priority 定序
+        if not _rank(ctx, pool):
+            logger.info("r5_fallback fallback_reason=apology_pool_priority_only")
+            if trace is not None:
+                trace["reason"] = "selected"
+            return sorted(pool, key=lambda i: (-i.get("priority", 5), str(i.get("id"))))[0]
+        kept = pool
+
+    if ctx.get("explicit_sticker_request"):
+        return _select_explicit(ctx, kept, deterministic=deterministic, trace=trace)
+    selected, _ranked = _ranked_pick(ctx, kept, deterministic, trace=trace)
+    return selected
+
+
+# ------------------------------------------------------------------ 弱信号兜底（R7.1）
+def _generic_fallback_decision(ctx, kept):
+    """兜底判定（纯函数，不写日志、不改 ctx）。"""
+    eligible, reason = fallback_evaluate(ctx)
+    if not eligible:
+        return {"eligible": False, "reason": None, "block_reason": reason,
+                "item": None, "rank": None, "skipped": []}
+    item, detail = select_generic(kept)
+    if item is None:
+        return {"eligible": True, "reason": reason, "block_reason": "no_generic_candidate",
+                "item": None, "rank": None, "skipped": detail.get("skipped", [])}
+    return {"eligible": True, "reason": reason, "block_reason": None,
+            "item": item, "rank": detail.get("rank"), "skipped": detail.get("skipped", [])}
+
+
+def _trace_fallback(trace, decision):
+    """trace 只做诊断，不参与任何判定。"""
+    if trace is None:
+        return
+    trace["fallback_eligible"] = decision["eligible"]
+    trace["fallback_reason"] = decision["reason"]
+    trace["fallback_block_reason"] = decision["block_reason"]
+    trace["fallback_selected_id"] = (
+        decision["item"].get("id") if decision["item"] is not None else None)
+
+
+def _apply_generic_fallback(ctx, kept, mode, trace):
+    """`_choose` 返回 None 之后的兜底。
+
+    只有 auto 会改变返回值：off 是 R4 回滚开关（不评估），shadow 只记录"如果开 auto
+    会发哪张"，返回仍然是 None —— 保证 shadow 与 off 对外结果一致。
+    候选池 kept 已经过 apply_filters，所以危机/关系/avoid_when/危险图全部先生效。
+    """
+    if mode == "off":
+        return None
+
+    decision = _generic_fallback_decision(ctx, kept)
+    _trace_fallback(trace, decision)
+    item = decision["item"]
+    selected_id = item.get("id") if item is not None else None
+
+    if mode == "shadow":
+        logger.info(
+            "r71_shadow r71_would_select=%s fallback_eligible=%s fallback_reason=%s "
+            "fallback_block_reason=%s context_hash=%s",
+            selected_id, decision["eligible"], decision["reason"],
+            decision["block_reason"], ctx.get("context_hash", ""),
+        )
+        return None
+
+    logger.info(
+        "r71_fallback fallback_eligible=%s fallback_reason=%s fallback_selected_id=%s "
+        "fallback_rank=%s fallback_block_reason=%s skipped=%s signal_count=%s "
+        "relationship=%s r5_mode=%s context_hash=%s",
+        decision["eligible"], decision["reason"], selected_id, decision["rank"],
+        decision["block_reason"], decision["skipped"], ctx.get("signal_count"),
+        ctx.get("relationship"), mode, ctx.get("context_hash", ""),
+    )
+
+    if item is None:
+        if decision["block_reason"] == "no_generic_candidate" and trace is not None:
+            # 用户确实要图、也确实没有安全通用图：把原因说清楚，不要含糊成“没识别到情绪”
+            trace["reason"] = "no_generic_candidate"
+        return None
+    if trace is not None:
+        trace["reason"] = "generic_fallback"
+    return item
+
+
+def choose_with_fallback(ctx, kept, mode=None, deterministic=True, trace=None):
+    """正常选择 + 弱信号兜底。search_sticker 与诊断工具共用同一条链路。"""
+    mode = intent_mode() if mode is None else mode
+    ctx["_intent_active"] = mode == "auto"
+    selected = _choose(ctx, kept, deterministic=deterministic, trace=trace)
+    if selected is None:
+        selected = _apply_generic_fallback(ctx, kept, mode=mode, trace=trace)
+    return selected
+
+
 def _log_selection(ctx, item, score, matched_tags, candidates=None, index_version="unknown"):
     logger.info(
         "sticker_selected selected_sticker_id=%s score=%.2f matched_tags=%s candidate_scores=%s "
@@ -559,64 +778,110 @@ def _log_selection(ctx, item, score, matched_tags, candidates=None, index_versio
     )
 
 
-def search_sticker(context, sticker_id=None, *, deterministic=True, relationship=None):
-    """选图。context 可以是 analyze_context 的结果，也可以是原始文本。"""
+def search_sticker(context, sticker_id=None, *, deterministic=True, relationship=None, trace=None):
+    """选图。context 可以是 analyze_context 的结果，也可以是原始文本。
+
+    秩序不可颠倒：闸门 -> 过滤 -> 打分 -> （意图）-> 选择。
+    意图只在 `auto` 模式下参与打分；`shadow` 只把 R5 结果写进日志。
+
+    trace：可选 dict，回填 {"reason": ...} 供调用方区分“闸门拦住 / 没有信号 /
+    没有匹配 / 正常选中”，不参与任何判定，也不改变返回值。
+    """
     from emotion_engine import analyze_context
 
     ctx = analyze_context(context) if isinstance(context, str) else dict(context or {})
     ctx["relationship"] = resolve_relationship(relationship)
 
+    # 输入侧体检：只记长度与信号量，绝不记原文
+    logger.info(
+        "r5_input input_len=%d signal_count=%d explicit_request=%s context_hash=%s",
+        len(str(ctx.get("original_text") or "")), int(ctx.get("signal_count") or 0),
+        bool(ctx.get("explicit_sticker_request")), ctx.get("context_hash", ""),
+    )
+
+    mode = intent_mode()
     data = load_library()
     items = data["stickers"]
 
-    if sticker_id:
-        for item in items:
-            if item.get("id") == sticker_id:
-                logger.info("sticker_selected mode=exact selected_sticker_id=%s", sticker_id)
-                return item
-        logger.warning("sticker_id_not_found id=%s", sticker_id)
-        raise StickerNotFoundError("未找到指定表情包 ID：%s" % sticker_id)
+    if mode == "off":
+        # 回滚开关：完全不看意图，与 R4 逐条一致
+        ctx.pop("assistant_intent", None)
+        ctx["intent_source"] = "off"
+    else:
+        explicit = intent_engine.normalize_intent(ctx.get("assistant_intent"))
+        if explicit:
+            ctx["assistant_intent"] = explicit
+            ctx["intent_source"] = ctx.get("intent_source") or "explicit"
+        else:
+            derived = intent_engine.derive_intent(ctx)
+            ctx["assistant_intent"] = derived
+            ctx["intent_source"] = "derived" if derived else "none"
 
-    if not should_send_sticker(ctx):
-        logger.info("trigger_result triggered=False context_hash=%s", ctx.get("context_hash", ""))
+    if sticker_id:
+        picked = _exact_pick(items, ctx, sticker_id)
+        if trace is not None:
+            trace["reason"] = "selected" if picked is not None else "blocked_by_safety"
+        return picked
+
+    triggered, reason = should_send_sticker_reason(ctx)
+    if not triggered:
+        logger.info(
+            "trigger_result triggered=False gate_reason=%s context_hash=%s",
+            reason, ctx.get("context_hash", ""),
+        )
+        if trace is not None:
+            trace["reason"] = "gate:" + reason
         return None
 
     kept, _dropped = apply_filters(items, ctx, relationship=ctx["relationship"])
 
-    if ctx.get("explicit_sticker_request"):
-        selected = _select_explicit(ctx, kept, deterministic=deterministic)
-    else:
-        ranked = _rank(ctx, kept)
-        if not ranked:
-            logger.info(
-                "sticker_candidates count=0 fallback_reason=no_semantic_match context_hash=%s",
-                ctx.get("context_hash", ""),
-            )
-            return None
-        top = ranked[0]
-        close = [r for r in ranked
-                 if r["breakdown"].keys() == top["breakdown"].keys() and top["score"] - r["score"] <= 1]
-        selected = (random.choice([r["item"] for r in close])
-                    if len(close) > 1 and not deterministic else top["item"])
-        _log_selection._last_candidates = [(r["id"], r["score"]) for r in ranked[:5]]
+    # 返回给调用方的那一份：只有 auto 才启用意图打分（兜底同样只在 auto 生效）
+    selected = choose_with_fallback(
+        ctx, kept, mode=mode, deterministic=deterministic, trace=trace)
+
+    if mode == "shadow":
+        # 影子打分：算一遍"如果开 auto 会选谁"，只写日志，绝不改变返回值
+        shadow_ctx = dict(ctx)
+        shadow_ctx["_intent_active"] = True
+        shadow = _choose(shadow_ctx, kept, deterministic=deterministic)
+        changed = (shadow.get("id") if shadow else None) != (selected.get("id") if selected else None)
+        logger.info(
+            "r5_shadow r5_mode=shadow r5_shadow_intent=%s intent_source=%s "
+            "r5_shadow_id=%s r4_selected_id=%s r5_shadow_would_change=%s context_hash=%s",
+            ctx.get("assistant_intent") or "none", ctx.get("intent_source"),
+            shadow.get("id") if shadow else None,
+            selected.get("id") if selected else None,
+            changed, ctx.get("context_hash", ""),
+        )
 
     if selected is None:
+        logger.info("r5_decision r5_mode=%s assistant_intent=%s intent_source=%s "
+                    "selected_sticker_id=None reason=%s context_hash=%s",
+                    mode, ctx.get("assistant_intent") or "none", ctx.get("intent_source"),
+                    (trace or {}).get("reason", "unknown"), ctx.get("context_hash", ""))
         return None
 
+    behavior = intent_engine.behaviors_for(selected)
     matched = sorted(t for t in _values(selected, "tags")
                      if _has_phrase(str(ctx.get("sticker_query") or ctx.get("original_text") or "").lower(), t))
     ranked_all = _rank(ctx, kept)
     candidates = [(r["id"], r["score"]) for r in ranked_all[:5]]
     score = next((r["score"] for r in ranked_all if r["id"] == selected.get("id")), 0.0)
+    logger.info(
+        "r5_decision r5_mode=%s assistant_intent=%s intent_source=%s behavior_source=%s "
+        "selected_sticker_id=%s context_hash=%s",
+        mode, ctx.get("assistant_intent") or "none", ctx.get("intent_source"),
+        behavior["source"], selected.get("id"), ctx.get("context_hash", ""),
+    )
     _log_selection(ctx, selected, score, matched, candidates, data.get("version", "unknown"))
     return selected
 
 
-def select_sticker(context, relationship=None, library=None):
+def select_sticker(context, relationship=None, library=None, trace=None):
     """R3 旧名字，保留。library 参数仅用于测试注入。"""
     if library is not None:
         set_library(library)
-    return search_sticker(context, relationship=relationship)
+    return search_sticker(context, relationship=relationship, trace=trace)
 
 
 # ------------------------------------------------------------------ 图片
